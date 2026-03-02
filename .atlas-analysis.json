@@ -1,0 +1,108 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "rbx-css",
+  "projectDescription": "CSS to Roblox StyleSheet compiler that transforms standard CSS into Luau modules or RBXMX model files",
+  "theme": "aspen",
+  "primaryColor": "#335fff",
+  "lightColor": "#4470ff",
+  "darkColor": "#1a1a2e",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": ["introduction", "installation", "quickstart"]
+          },
+          {
+            "group": "CLI Reference",
+            "pages": ["cli/compile", "cli/watch", "cli/flags"]
+          },
+          {
+            "group": "CSS Mapping",
+            "pages": [
+              "mapping/selectors",
+              "mapping/properties",
+              "mapping/pseudo-instances",
+              "mapping/units",
+              "mapping/colors",
+              "mapping/fonts"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "advanced/tokens",
+              "advanced/theming",
+              "advanced/nesting",
+              "advanced/manifest"
+            ]
+          },
+          {
+            "group": "Output Formats",
+            "pages": ["output/luau", "output/rbxmx"]
+          },
+          {
+            "group": "Integration",
+            "pages": ["integration/rojo", "integration/workflow"]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Programmatic API",
+            "pages": [
+              "api/compile",
+              "api/generate-luau",
+              "api/generate-rbxmx",
+              "api/types"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Examples",
+        "groups": [
+          {
+            "group": "Examples",
+            "pages": [
+              "examples/basic-styling",
+              "examples/flexbox-layout",
+              "examples/dark-theme",
+              "examples/component-library"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "CLI tool with compile and watch modes",
+    "Transforms standard CSS to Roblox StyleSheet instances",
+    "Supports CSS variables as StyleSheet tokens",
+    "Maps CSS selectors to Roblox class/tag/name selectors",
+    "Auto-generates pseudo-instance rules (UICorner, UIStroke, UIPadding, etc.)",
+    "Flexbox and grid layout support via UIListLayout/UIGridLayout",
+    "Theme support with data-theme and prefers-color-scheme",
+    "Multiple output formats: Luau modules and RBXMX model files",
+    "CSS nesting support",
+    "Comprehensive property mapping with warnings for unsupported features"
+  ],
+  "publicApiSurface": [
+    "compile(files, options)",
+    "generateLuau(ir, options)",
+    "generateRBXMX(ir)",
+    "generateManifest(ir)",
+    "rbx-css compile <files...>",
+    "rbx-css watch <path>",
+    "StyleSheetIR",
+    "StyleRuleIR",
+    "RobloxValue",
+    "TokenValue",
+    "PseudoInstanceIR",
+    "WarningCollector"
+  ]
+}
