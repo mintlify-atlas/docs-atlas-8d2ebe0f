@@ -1,0 +1,430 @@
+---
+title: Properties
+description: How CSS properties map to Roblox GuiObject properties
+---
+
+rbx-css maps standard CSS properties to their Roblox equivalents. Properties that require UI modifier instances (like `UICorner`, `UIStroke`) are covered in [Pseudo-instances](/mapping/pseudo-instances).
+
+## Colors
+
+### Background color
+
+```css input.css
+.card {
+  background-color: #335fff;
+  background-color: rgb(51, 95, 255);
+  background-color: rgba(51, 95, 255, 0.8);
+}
+```
+
+```lua output.luau
+rule:SetProperty("BackgroundColor3", Color3.fromRGB(51, 95, 255))
+rule:SetProperty("BackgroundTransparency", 0.2) -- from alpha
+```
+
+| CSS Property | Roblox Property | Notes |
+|--------------|-----------------|-------|
+| `background-color` | `BackgroundColor3` | Alpha channel maps to `BackgroundTransparency` |
+| `background: transparent` | `BackgroundTransparency` | Sets to `1` |
+
+### Text color
+
+```css input.css
+.text {
+  color: white;
+  color: rgba(255, 255, 255, 0.7);
+}
+```
+
+```lua output.luau
+rule:SetProperty("TextColor3", Color3.fromRGB(255, 255, 255))
+rule:SetProperty("TextTransparency", 0.3) -- from alpha
+```
+
+| CSS Property | Roblox Property | Notes |
+|--------------|-----------------|-------|
+| `color` | `TextColor3` | For text elements |
+| `color` (with alpha) | `TextColor3` + `TextTransparency` | Alpha inverted to transparency |
+
+### Opacity
+
+```css input.css
+.element {
+  opacity: 0.8;
+}
+```
+
+```lua output.luau
+rule:SetProperty("BackgroundTransparency", 0.2) -- inverted
+```
+
+<Warning>
+CSS `opacity` values are inverted when mapping to Roblox `Transparency` properties. CSS `opacity: 1` (fully opaque) becomes Roblox `Transparency = 0`, and CSS `opacity: 0` (fully transparent) becomes `Transparency = 1`.
+</Warning>
+
+## Sizing
+
+### Width and height
+
+```css input.css
+.box {
+  width: 100%;
+  height: 200px;
+}
+```
+
+```lua output.luau
+rule:SetProperty("Size", UDim2.new(1, 0, 0, 200))
+```
+
+| CSS Property | Roblox Property | Transform |
+|--------------|-----------------|----------|
+| `width` + `height` | `Size` (UDim2) | Combined into single UDim2 |
+| `width: auto` | `AutomaticSize` | `Enum.AutomaticSize.X` or `XY` |
+| `height: auto` | `AutomaticSize` | `Enum.AutomaticSize.Y` or `XY` |
+
+### Auto sizing
+
+```css input.css
+.auto-width {
+  width: auto;
+  height: 48px;
+}
+
+.auto-both {
+  width: auto;
+  height: auto;
+}
+```
+
+```lua output.luau
+rule1:SetProperty("AutomaticSize", Enum.AutomaticSize.X)
+rule1:SetProperty("Size", UDim2.new(0, 0, 0, 48))
+
+rule2:SetProperty("AutomaticSize", Enum.AutomaticSize.XY)
+```
+
+### Size constraints
+
+See [Pseudo-instances - UISizeConstraint](/mapping/pseudo-instances#uisizeconstraint) for `min-width`, `max-width`, `min-height`, `max-height`.
+
+## Position
+
+### Left and top
+
+```css input.css
+.positioned {
+  left: 50%;
+  top: 100px;
+}
+```
+
+```lua output.luau
+rule:SetProperty("Position", UDim2.new(0.5, 0, 0, 100))
+```
+
+| CSS Property | Roblox Property | Notes |
+|--------------|-----------------|-------|
+| `left` + `top` | `Position` (UDim2) | Combined into single UDim2 |
+| `position: absolute` | (default) | All Roblox UI is absolute by default |
+
+<Warning>
+CSS properties `right` and `bottom` are not supported. Roblox uses anchor points and position instead.
+</Warning>
+
+### Transform origin (anchor point)
+
+```css input.css
+.centered {
+  transform-origin: center center;
+}
+
+.top-left {
+  transform-origin: left top;
+}
+
+.custom {
+  transform-origin: 25% 75%;
+}
+```
+
+```lua output.luau
+rule1:SetProperty("AnchorPoint", Vector2.new(0.5, 0.5))
+rule2:SetProperty("AnchorPoint", Vector2.new(0, 0))
+rule3:SetProperty("AnchorPoint", Vector2.new(0.25, 0.75))
+```
+
+### Z-index
+
+```css input.css
+.layer-top {
+  z-index: 10;
+}
+```
+
+```lua output.luau
+rule:SetProperty("ZIndex", 10)
+```
+
+## Typography
+
+### Font size
+
+```css input.css
+.text {
+  font-size: 18px;
+  font-size: 1.125rem; /* 18px */
+  font-size: 1.125em;  /* approximated as rem */
+}
+```
+
+```lua output.luau
+rule:SetProperty("TextSize", 18)
+rule:SetProperty("TextSize", 18) -- rem * 16
+rule:SetProperty("TextSize", 18) -- em * 16 (approximation)
+```
+
+| CSS Property | Roblox Property | Supported Units |
+|--------------|-----------------|----------------|
+| `font-size` | `TextSize` | `px`, `rem`, `em` |
+
+### Font family, weight, and style
+
+See [Fonts](/mapping/fonts) for detailed font mapping.
+
+```css input.css
+.text {
+  font-family: 'Gotham', sans-serif;
+  font-weight: 700;
+  font-style: italic;
+}
+```
+
+```lua output.luau
+rule:SetProperty("FontFace", Font.new(
+  "rbxasset://fonts/families/GothamSSm.json",
+  Enum.FontWeight.Bold,
+  Enum.FontStyle.Italic
+))
+```
+
+### Text alignment
+
+```css input.css
+.text {
+  text-align: center;
+  vertical-align: middle;
+}
+```
+
+```lua output.luau
+rule:SetProperty("TextXAlignment", Enum.TextXAlignment.Center)
+rule:SetProperty("TextYAlignment", Enum.TextYAlignment.Center)
+```
+
+| CSS Property | Roblox Property | Values |
+|--------------|-----------------|--------|
+| `text-align` | `TextXAlignment` | `left` → `Left`, `center` → `Center`, `right` → `Right` |
+| `vertical-align` | `TextYAlignment` | `top` → `Top`, `center`/`middle` → `Center`, `bottom` → `Bottom` |
+
+### Line height
+
+```css input.css
+.text {
+  line-height: 1.5;
+}
+```
+
+```lua output.luau
+rule:SetProperty("LineHeight", 1.5)
+```
+
+### Text wrapping and overflow
+
+```css input.css
+.wrap {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.truncate {
+  text-overflow: ellipsis;
+}
+```
+
+```lua output.luau
+rule1:SetProperty("TextWrapped", true)
+rule2:SetProperty("TextTruncate", Enum.TextTruncate.AtEnd)
+```
+
+<Warning>
+CSS properties `letter-spacing`, `text-transform`, `text-decoration`, and `text-shadow` are not supported in Roblox.
+</Warning>
+
+## Visibility
+
+### Display and visibility
+
+```css input.css
+.hidden {
+  display: none;
+  /* or */
+  visibility: hidden;
+}
+```
+
+```lua output.luau
+rule:SetProperty("Visible", false)
+```
+
+### Overflow
+
+```css input.css
+.clip {
+  overflow: hidden;
+}
+
+.scroll {
+  overflow: scroll;
+}
+```
+
+```lua output.luau
+rule1:SetProperty("ClipsDescendants", true)
+-- rule2: Element upgraded to ScrollingFrame (see manifest)
+```
+
+<Warning>
+When `overflow: scroll` is detected, rbx-css emits a manifest entry. Tools like rbx-tsx use this to upgrade `Frame` → `ScrollingFrame` during element creation.
+</Warning>
+
+## Images
+
+### Background image
+
+```css input.css
+.image {
+  background-image: url('rbxassetid://123456');
+}
+```
+
+```lua output.luau
+rule:SetProperty("Image", "rbxassetid://123456")
+```
+
+### Object fit
+
+```css input.css
+.cover {
+  object-fit: cover;
+}
+
+.contain {
+  object-fit: contain;
+}
+
+.fill {
+  object-fit: fill;
+}
+```
+
+```lua output.luau
+rule1:SetProperty("ScaleType", Enum.ScaleType.Crop)
+rule2:SetProperty("ScaleType", Enum.ScaleType.Fit)
+rule3:SetProperty("ScaleType", Enum.ScaleType.Stretch)
+```
+
+## Transforms
+
+### Scale
+
+See [Pseudo-instances - UIScale](/mapping/pseudo-instances#uiscale) for `transform: scale()`.
+
+### Rotation
+
+```css input.css
+.rotated {
+  transform: rotate(45deg);
+  transform: rotate(0.785rad);
+  transform: rotate(0.125turn);
+}
+```
+
+```lua output.luau
+rule:SetProperty("Rotation", 45)
+rule:SetProperty("Rotation", 45) -- converted from radians
+rule:SetProperty("Rotation", 45) -- converted from turns
+```
+
+<Warning>
+CSS `transform` functions like `translate()`, `translateX()`, `skew()`, `matrix()` are not supported. Only `scale()` (via UIScale) and `rotate()` are available.
+</Warning>
+
+## Aspect ratio
+
+See [Pseudo-instances - UIAspectRatioConstraint](/mapping/pseudo-instances#uiaspectratioconstraint).
+
+## Layout order
+
+```css input.css
+.item {
+  order: 2;
+}
+```
+
+```lua output.luau
+rule:SetProperty("LayoutOrder", 2)
+```
+
+| CSS Property | Roblox Property | Notes |
+|--------------|-----------------|-------|
+| `order` | `LayoutOrder` | Used by UIListLayout and UIGridLayout for sorting |
+
+## Unsupported properties
+
+These CSS properties have no Roblox equivalent:
+
+### Silently ignored
+
+Common browser and framework properties are silently ignored to avoid noise:
+
+- `box-sizing`, `pointer-events`, `cursor`, `user-select`
+- `transition-*`, `animation-*`
+- `filter`, `backdrop-filter`, `mask`, `clip-path`
+- `text-shadow`, `text-decoration`, `text-transform`
+- All table-related properties (`border-collapse`, `table-layout`, etc.)
+- Browser-specific prefixed properties
+
+### Emit warnings
+
+These properties emit warnings because they may indicate unexpected behavior:
+
+- `margin-*` (Roblox has no margin; use `gap` on parent flex container instead)
+- `min-width`, `max-width`, `min-height`, `max-height` (handled by UISizeConstraint pseudo-instance)
+- Unknown or custom properties not in the ignore list
+
+## CSS variables (tokens)
+
+CSS custom properties can be used with `var()` and map to StyleSheet attributes:
+
+```css input.css
+:root {
+  --primary: #335fff;
+  --spacing: 16px;
+}
+
+.card {
+  background-color: var(--primary);
+  padding: var(--spacing);
+}
+```
+
+```lua output.luau
+sheet:SetAttribute("primary", Color3.fromRGB(51, 95, 255))
+sheet:SetAttribute("spacing", UDim.new(0, 16))
+
+rule:SetProperty("BackgroundColor3", "$primary")
+-- padding creates UIPadding pseudo-instance with $spacing reference
+```
+
+See the [Theming guide](/guides/theming) for more details on using CSS variables.

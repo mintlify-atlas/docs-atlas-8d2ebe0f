@@ -1,0 +1,394 @@
+---
+title: Types
+description: TypeScript type definitions for rbx-css API
+---
+
+Complete TypeScript type reference for the rbx-css programmatic API.
+
+## Compiler types
+
+### CompileOptions
+
+Configuration options for the `compile()` function.
+
+```ts
+interface CompileOptions {
+  name: string;
+  warnLevel: WarningLevel;
+  strict: boolean;
+  includeBaseRules?: boolean;
+}
+```
+
+<ParamField path="name" type="string" required>
+  Name for the generated StyleSheet instance
+</ParamField>
+
+<ParamField path="warnLevel" type="WarningLevel" required>
+  Warning verbosity level: `"all"`, `"unsupported"`, or `"none"`
+</ParamField>
+
+<ParamField path="strict" type="boolean" required>
+  When `true`, warnings are treated as errors
+</ParamField>
+
+<ParamField path="includeBaseRules" type="boolean">
+  When `false`, skip auto-generated base element rules. Defaults to `true`
+</ParamField>
+
+### CompileResult
+
+Return type of the `compile()` function.
+
+```ts
+interface CompileResult {
+  ir: StyleSheetIR;
+  warnings: WarningCollector;
+  overflowScrollClasses: Map<string, boolean>;
+}
+```
+
+<ResponseField name="ir" type="StyleSheetIR">
+  The compiled intermediate representation
+</ResponseField>
+
+<ResponseField name="warnings" type="WarningCollector">
+  Warning collector with diagnostics
+</ResponseField>
+
+<ResponseField name="overflowScrollClasses" type="Map<string, boolean>">
+  Map of class names to whether they use `overflow: scroll`
+</ResponseField>
+
+### LuauOptions
+
+Configuration options for the `generateLuau()` function.
+
+```ts
+interface LuauOptions {
+  minify: boolean;
+  sourceFile?: string;
+}
+```
+
+<ParamField path="minify" type="boolean" required>
+  When `true`, removes comments and indentation
+</ParamField>
+
+<ParamField path="sourceFile" type="string">
+  Optional source filename to include in generated comments
+</ParamField>
+
+## Intermediate representation types
+
+### StyleSheetIR
+
+The root intermediate representation of a compiled stylesheet.
+
+```ts
+interface StyleSheetIR {
+  name: string;
+  tokens: Map<string, TokenValue>;
+  rules: StyleRuleIR[];
+  themes?: Map<string, StyleSheetIR>;
+}
+```
+
+<ResponseField name="name" type="string">
+  StyleSheet instance name
+</ResponseField>
+
+<ResponseField name="tokens" type="Map<string, TokenValue>">
+  Design tokens extracted from `:root` CSS custom properties
+</ResponseField>
+
+<ResponseField name="rules" type="StyleRuleIR[]">
+  Array of compiled style rules
+</ResponseField>
+
+<ResponseField name="themes" type="Map<string, StyleSheetIR>">
+  Optional theme variations (from `[data-theme]` or `@media (prefers-color-scheme)`)
+</ResponseField>
+
+### StyleRuleIR
+
+A single compiled style rule.
+
+```ts
+interface StyleRuleIR {
+  selector: string;
+  properties: Map<string, RobloxValue>;
+  pseudoInstances: PseudoInstanceIR[];
+}
+```
+
+<ResponseField name="selector" type="string">
+  The Roblox selector (e.g., `".card"`, `"Frame"`, `"TextButton.primary"`)
+</ResponseField>
+
+<ResponseField name="properties" type="Map<string, RobloxValue>">
+  Map of Roblox property names to values
+</ResponseField>
+
+<ResponseField name="pseudoInstances" type="PseudoInstanceIR[]">
+  Array of pseudo-instance declarations (currently unused; pseudo-instances are emitted as separate rules with `::Component` selectors)
+</ResponseField>
+
+### PseudoInstanceIR
+
+A pseudo-instance declaration (e.g., `UICorner`, `UIStroke`).
+
+```ts
+interface PseudoInstanceIR {
+  type: PseudoInstanceType;
+  properties: Map<string, RobloxValue>;
+}
+```
+
+<ResponseField name="type" type="PseudoInstanceType">
+  The type of Roblox instance (e.g., `"UICorner"`, `"UIStroke"`)
+</ResponseField>
+
+<ResponseField name="properties" type="Map<string, RobloxValue>">
+  Map of property names to values for this instance
+</ResponseField>
+
+### PseudoInstanceType
+
+Supported pseudo-instance types.
+
+```ts
+type PseudoInstanceType =
+  | "UICorner"
+  | "UIStroke"
+  | "UIPadding"
+  | "UIListLayout"
+  | "UIGridLayout"
+  | "UIGradient"
+  | "UIFlexItem"
+  | "UIScale"
+  | "UIAspectRatioConstraint"
+  | "UISizeConstraint";
+```
+
+## Value types
+
+### RobloxValue
+
+A Roblox property value in the IR. Can be any of the following types:
+
+```ts
+type RobloxValue =
+  | { type: "Color3"; value: [number, number, number] }
+  | { type: "UDim2"; value: [number, number, number, number] }
+  | { type: "UDim"; value: [number, number] }
+  | { type: "number"; value: number }
+  | { type: "boolean"; value: boolean }
+  | { type: "Enum"; enum: string; value: string }
+  | { type: "token"; name: string }
+  | { type: "Font"; family: string; weight?: string; style?: string }
+  | { type: "Vector2"; value: [number, number] }
+  | { type: "string"; value: string }
+  | {
+      type: "ColorSequence";
+      stops: Array<{ position: number; color: [number, number, number] }>;
+    };
+```
+
+<Expandable title="RobloxValue variants">
+  <ResponseField name="Color3" type="{ type: 'Color3'; value: [number, number, number] }">
+    RGB color value (0-255 range)
+  </ResponseField>
+  
+  <ResponseField name="UDim2" type="{ type: 'UDim2'; value: [number, number, number, number] }">
+    2D dimension value `[xScale, xOffset, yScale, yOffset]`
+  </ResponseField>
+  
+  <ResponseField name="UDim" type="{ type: 'UDim'; value: [number, number] }">
+    1D dimension value `[scale, offset]`
+  </ResponseField>
+  
+  <ResponseField name="number" type="{ type: 'number'; value: number }">
+    Numeric value
+  </ResponseField>
+  
+  <ResponseField name="boolean" type="{ type: 'boolean'; value: boolean }">
+    Boolean value
+  </ResponseField>
+  
+  <ResponseField name="Enum" type="{ type: 'Enum'; enum: string; value: string }">
+    Roblox enum value (e.g., `{ type: "Enum", enum: "AutomaticSize", value: "XY" }`)
+  </ResponseField>
+  
+  <ResponseField name="token" type="{ type: 'token'; name: string }">
+    Reference to a design token (e.g., `{ type: "token", name: "--primary" }`)
+  </ResponseField>
+  
+  <ResponseField name="Font" type="{ type: 'Font'; family: string; weight?: string; style?: string }">
+    Font value with optional weight and style
+  </ResponseField>
+  
+  <ResponseField name="Vector2" type="{ type: 'Vector2'; value: [number, number] }">
+    2D vector `[x, y]`
+  </ResponseField>
+  
+  <ResponseField name="string" type="{ type: 'string'; value: string }">
+    String value
+  </ResponseField>
+  
+  <ResponseField name="ColorSequence" type="{ type: 'ColorSequence'; stops: Array<{ position: number; color: [number, number, number] }> }">
+    Gradient color sequence with keypoint stops
+  </ResponseField>
+</Expandable>
+
+### TokenValue
+
+A design token value from `:root` CSS custom properties.
+
+```ts
+type TokenValue =
+  | { type: "Color3"; value: [number, number, number] }
+  | { type: "UDim"; value: [number, number] }
+  | { type: "number"; value: number }
+  | { type: "Font"; family: string; weight?: string; style?: string }
+  | { type: "string"; value: string };
+```
+
+<Expandable title="TokenValue variants">
+  <ResponseField name="Color3" type="{ type: 'Color3'; value: [number, number, number] }">
+    RGB color token
+  </ResponseField>
+  
+  <ResponseField name="UDim" type="{ type: 'UDim'; value: [number, number] }">
+    1D dimension token (for border-radius, padding, etc.)
+  </ResponseField>
+  
+  <ResponseField name="number" type="{ type: 'number'; value: number }">
+    Numeric token
+  </ResponseField>
+  
+  <ResponseField name="Font" type="{ type: 'Font'; family: string; weight?: string; style?: string }">
+    Font token
+  </ResponseField>
+  
+  <ResponseField name="string" type="{ type: 'string'; value: string }">
+    String token
+  </ResponseField>
+</Expandable>
+
+## Warning types
+
+### WarningLevel
+
+Warning verbosity level.
+
+```ts
+type WarningLevel = "all" | "unsupported" | "none";
+```
+
+- `"all"` — Show all warnings
+- `"unsupported"` — Only show warnings about unsupported CSS features
+- `"none"` — Suppress all warnings
+
+### WarningCode
+
+Warning category codes.
+
+```ts
+type WarningCode =
+  | "unsupported-property"
+  | "unsupported-selector"
+  | "unsupported-unit"
+  | "partial-mapping"
+  | "type-inference-ambiguous";
+```
+
+### CompilerWarning
+
+A single compiler warning.
+
+```ts
+interface CompilerWarning {
+  code: WarningCode;
+  message: string;
+  file?: string;
+  line?: number;
+  column?: number;
+}
+```
+
+<ResponseField name="code" type="WarningCode">
+  Warning category code
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable warning message
+</ResponseField>
+
+<ResponseField name="file" type="string">
+  Source filename (if available)
+</ResponseField>
+
+<ResponseField name="line" type="number">
+  Line number in source file (if available)
+</ResponseField>
+
+<ResponseField name="column" type="number">
+  Column number in source file (if available)
+</ResponseField>
+
+### WarningCollector
+
+Warning collector class for managing compilation diagnostics.
+
+```ts
+class WarningCollector {
+  constructor(level: WarningLevel = "all", strict: boolean = false);
+  warn(warning: CompilerWarning): void;
+  getWarnings(): readonly CompilerWarning[];
+  hasErrors(): boolean;
+  format(): string;
+}
+```
+
+<ParamField path="level" type="WarningLevel">
+  Warning verbosity level (defaults to `"all"`)
+</ParamField>
+
+<ParamField path="strict" type="boolean">
+  When `true`, any warnings are treated as errors (defaults to `false`)
+</ParamField>
+
+**Methods:**
+
+- `warn(warning)` — Add a warning
+- `getWarnings()` — Get all collected warnings
+- `hasErrors()` — Returns `true` if strict mode is enabled and warnings exist
+- `format()` — Format warnings as a string (one per line)
+
+## Manifest types
+
+### CSSManifest
+
+Metadata about the compiled stylesheet.
+
+```ts
+interface CSSManifest {
+  classes: Record<string, { overflowScroll: boolean }>;
+  elementMap: Record<string, string>;
+}
+```
+
+<ResponseField name="classes" type="Record<string, { overflowScroll: boolean }>">
+  Map of CSS class names to metadata (e.g., whether they use `overflow: scroll`)
+</ResponseField>
+
+<ResponseField name="elementMap" type="Record<string, string>">
+  Map of HTML element names to Roblox instance class names (e.g., `{ "div": "Frame" }`)
+</ResponseField>
+
+## Related
+
+- [compile()](/api/compile) — Compile CSS to IR
+- [generateLuau()](/api/generate-luau) — Generate Luau code
+- [generateRBXMX()](/api/generate-rbxmx) — Generate RBXMX XML

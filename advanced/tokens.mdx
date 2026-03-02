@@ -1,0 +1,204 @@
+---
+title: CSS variables and tokens
+description: Transform CSS custom properties into Roblox StyleSheet attributes
+---
+
+CSS custom properties (CSS variables) defined on `:root` are automatically converted into StyleSheet attributes that can be referenced throughout your styles.
+
+## Basic usage
+
+Define tokens in `:root` and reference them with `var()`:
+
+```css
+:root {
+  --primary: #335fff;
+  --radius: 8px;
+  --gap: 12px;
+}
+
+.card {
+  background-color: var(--primary);
+  border-radius: var(--radius);
+}
+```
+
+This compiles to Luau code that sets attributes on the StyleSheet and references them using the `$` prefix:
+
+```lua
+-- Tokens from :root
+sheet:SetAttribute("primary", Color3.fromHex("#335fff"))
+sheet:SetAttribute("radius", UDim.new(0, 8))
+sheet:SetAttribute("gap", UDim.new(0, 12))
+
+-- Rule: .card
+local rule = Instance.new("StyleRule")
+rule.Selector = ".card"
+rule:SetProperties({
+  BackgroundColor3 = "$primary",
+})
+
+-- Rule: .card::UICorner
+local cornerRule = Instance.new("StyleRule")
+cornerRule.Selector = ".card::UICorner"
+cornerRule:SetProperty("CornerRadius", "$radius")
+```
+
+## Type inference
+
+The compiler automatically infers Roblox types from the CSS values:
+
+| CSS value | Inferred type | Example |
+|-----------|---------------|----------|
+| Color value | `Color3` | `#335fff`, `rgb(51, 95, 255)`, `hsl(228, 100%, 60%)` |
+| Length in `px` | `UDim` | `8px` → `UDim.new(0, 8)` |
+| Percentage | `UDim` | `50%` → `UDim.new(0.5, 0)` |
+| Number | `number` | `16`, `1.5` |
+| String | `string` | `"GothamSSm"`, `bold` |
+
+### Token types by property
+
+When you use a token with `var()`, the compiler knows which Roblox type to use based on the CSS property:
+
+```css
+:root {
+  --primary: #335fff;    /* Color3 */
+  --spacing: 16px;       /* UDim */
+  --line-height: 1.5;    /* number */
+  --font: "GothamSSm";   /* string → Font */
+}
+
+.button {
+  background-color: var(--primary);  /* Uses Color3 */
+  padding: var(--spacing);           /* Uses UDim */
+  line-height: var(--line-height);   /* Uses number */
+  font-family: var(--font);          /* Creates Font object */
+}
+```
+
+## Design token systems
+
+CSS variables are ideal for building design systems with semantic naming:
+
+```css
+:root {
+  /* Color palette */
+  --color-primary: #335fff;
+  --color-secondary: #ff0099;
+  --color-surface: white;
+  --color-text: #1a1a2e;
+  
+  /* Spacing scale */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  
+  /* Border radius scale */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  --radius-full: 50%;
+  
+  /* Typography */
+  --font-body: "GothamSSm";
+  --font-heading: "Montserrat";
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 24px;
+}
+
+.card {
+  background-color: var(--color-surface);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  gap: var(--space-sm);
+}
+
+.card h2 {
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
+  color: var(--color-text);
+}
+```
+
+## Token scoping
+
+Only tokens defined on `:root` are extracted as StyleSheet attributes. Tokens defined on other selectors are treated as regular CSS that doesn't map to Roblox:
+
+```css
+:root {
+  --primary: #335fff;  /* ✓ Becomes a StyleSheet attribute */
+}
+
+.card {
+  --card-bg: white;    /* ✗ Not extracted (scoped variable) */
+  background-color: var(--card-bg);
+}
+```
+
+<Warning>
+Scoped CSS variables (defined on selectors other than `:root`) are not supported. Define all reusable tokens on `:root`.
+</Warning>
+
+## Complex values
+
+Multi-token values that can't be mapped to a single Roblox type are silently skipped:
+
+```css
+:root {
+  --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);  /* Skipped - no shadow support */
+  --border: 1px solid red;                  /* Skipped - complex value */
+  
+  --color: red;        /* ✓ Supported - simple color */
+  --size: 16px;        /* ✓ Supported - simple length */
+}
+```
+
+## Working with frameworks
+
+CSS frameworks like Tailwind use CSS variables for internal functionality. These are automatically filtered out when they can't map to Roblox types:
+
+```css
+/* Tailwind CSS example */
+:root {
+  --tw-shadow: 0 0 #0000;           /* Skipped - framework internal */
+  --tw-ring-offset-width: 0px;      /* Skipped - framework internal */
+  
+  --primary-color: #335fff;         /* ✓ Extracted - valid token */
+}
+```
+
+The compiler silently ignores framework internals that don't represent meaningful design tokens.
+
+## Fallback values
+
+CSS `var()` fallback values are supported:
+
+```css
+.button {
+  /* Falls back to #335fff if --primary is not defined */
+  background-color: var(--primary, #335fff);
+  
+  /* Falls back to another variable, then to a literal */
+  padding: var(--button-padding, var(--space-md, 16px));
+}
+```
+
+The fallback value is used if the token reference cannot be resolved.
+
+## Implementation details
+
+The token extraction happens in `src/ir/tokens.ts`:
+
+- `:root` rules are identified and separated from regular style rules
+- Custom properties are extracted and their values are parsed
+- Type inference converts CSS values to appropriate Roblox types:
+  - `color` → `Color3` with RGB values `[r, g, b]`
+  - `length` with unit `px` → `UDim` with `[0, pixels]`
+  - `length` with unit `%` → `UDim` with `[scale/100, 0]`
+  - `token.string` → `string` value
+  - `token.number` → `number` value
+
+Tokens are stored in the IR as a `Map<string, TokenValue>` and emitted as `SetAttribute()` calls in the Luau output.

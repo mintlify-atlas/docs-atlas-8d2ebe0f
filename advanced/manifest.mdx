@@ -1,0 +1,253 @@
+---
+title: Manifest file
+description: Generate metadata about compiled stylesheets for build tools
+---
+
+The `--manifest` flag generates a `.manifest.json` file alongside your compiled stylesheet containing metadata about class names, element mappings, and special behaviors.
+
+## Generating a manifest
+
+Use the `--manifest` flag with the `compile` command:
+
+```bash
+rbx-css compile styles.css -o StyleSheet.luau --manifest
+```
+
+This generates two files:
+- `StyleSheet.luau` - The compiled stylesheet
+- `StyleSheet.manifest.json` - Metadata about the stylesheet
+
+## Manifest structure
+
+The manifest is a JSON file with two main sections:
+
+```json
+{
+  "classes": {
+    "scrollable-container": {
+      "overflowScroll": true
+    },
+    "card": {
+      "overflowScroll": false
+    }
+  },
+  "elementMap": {
+    "div": "Frame",
+    "span": "TextLabel",
+    "button": "TextButton",
+    "input": "TextBox",
+    "img": "ImageLabel",
+    "canvas": "ViewportFrame",
+    "video": "VideoFrame",
+    "scroll": "ScrollingFrame"
+  }
+}
+```
+
+### Classes section
+
+The `classes` object contains metadata for each CSS class used in your stylesheet:
+
+```typescript
+type Classes = Record<string, {
+  overflowScroll: boolean;
+}>;
+```
+
+- **`overflowScroll`** - `true` if the class uses `overflow: scroll`, indicating that elements with this class should be `ScrollingFrame` instead of `Frame`
+
+### Element map section
+
+The `elementMap` object contains the HTML-to-Roblox element mapping table:
+
+```typescript
+type ElementMap = Record<string, string>;
+```
+
+This is the same mapping used internally by the compiler (from `src/mappings/elements.ts`).
+
+## Use cases
+
+### TSX/JSX compilers
+
+Manifest files are primarily useful for tools that compile TSX/JSX to Roblox code (like rbx-tsx). The compiler can:
+
+1. **Determine instance types** - Check if a class requires `ScrollingFrame` instead of `Frame`
+2. **Map HTML elements** - Know which Roblox class to create for each HTML element
+3. **Validate class names** - Verify that used class names exist in the stylesheet
+
+```typescript
+// Example: rbx-tsx compiler reading manifest
+import manifest from './StyleSheet.manifest.json';
+
+function compileJSXElement(element: JSXElement) {
+  const className = element.props.className;
+  const htmlTag = element.tagName;
+  
+  // Map HTML tag to Roblox class
+  let robloxClass = manifest.elementMap[htmlTag] || 'Frame';
+  
+  // Override if class requires ScrollingFrame
+  if (className && manifest.classes[className]?.overflowScroll) {
+    robloxClass = 'ScrollingFrame';
+  }
+  
+  return `Instance.new("${robloxClass}")`;
+}
+```
+
+### Overflow scroll detection
+
+The most important metadata in the manifest is `overflowScroll`. This tells build tools when to use `ScrollingFrame` instead of `Frame`:
+
+```css
+/* styles.css */
+.container {
+  width: 100%;
+  height: 300px;
+}
+
+.scrollable {
+  width: 100%;
+  height: 300px;
+  overflow: scroll;  /* Requires ScrollingFrame */
+}
+```
+
+Generates manifest:
+
+```json
+{
+  "classes": {
+    "container": {
+      "overflowScroll": false
+    },
+    "scrollable": {
+      "overflowScroll": true
+    }
+  }
+}
+```
+
+A TSX compiler can use this to choose the correct instance type:
+
+```tsx
+// input.tsx
+<div className="container">Static content</div>
+<div className="scrollable">Scrollable content</div>
+
+// compiled output
+local container = Instance.new("Frame")  -- overflowScroll = false
+local scrollable = Instance.new("ScrollingFrame")  -- overflowScroll = true
+```
+
+### Element mapping reference
+
+The `elementMap` provides a single source of truth for HTML-to-Roblox mappings:
+
+| HTML element | Roblox class | Use case |
+|--------------|--------------|----------|
+| `div`, `nav`, `header`, `footer`, `main`, `section`, `article`, `aside`, `form`, `ul`, `ol`, `li`, `table`, `dialog`, `details`, `select` | `Frame` | Container elements |
+| `span`, `p`, `h1`-`h6`, `label`, `td`, `th` | `TextLabel` | Text display |
+| `button`, `a`, `summary`, `option` | `TextButton` | Interactive text |
+| `input`, `textarea` | `TextBox` | Text input |
+| `img` | `ImageLabel` | Images |
+| `canvas` | `ViewportFrame` | 3D viewport |
+| `video` | `VideoFrame` | Video playback |
+| `scroll` | `ScrollingFrame` | Explicit scrolling |
+
+### Build tool integration
+
+Manifests enable integration with build pipelines:
+
+```bash
+#!/bin/bash
+# build.sh
+
+# Compile CSS with manifest
+rbx-css compile src/styles.css -o dist/StyleSheet.luau --manifest
+
+# Compile TSX using the manifest
+rbx-tsx compile src/app.tsx -o dist/app.luau \
+  --manifest dist/StyleSheet.manifest.json
+
+# Sync with Rojo
+rojo build -o game.rbxl
+```
+
+## Implementation details
+
+Manifest generation is implemented in `src/manifest.ts`:
+
+```typescript
+export interface CSSManifest {
+  classes: Record<string, { overflowScroll: boolean }>;
+  elementMap: Record<string, string>;
+}
+
+export function generateManifest(
+  overflowScrollClasses: Map<string, boolean>
+): CSSManifest {
+  const classes: Record<string, { overflowScroll: boolean }> = {};
+  for (const [className, overflowScroll] of overflowScrollClasses) {
+    classes[className] = { overflowScroll };
+  }
+
+  const elementMap: Record<string, string> = { ...HTML_TO_ROBLOX };
+
+  return { classes, elementMap };
+}
+```
+
+The manifest is generated after the IR compilation phase and written to disk alongside the output file when `--manifest` is enabled.
+
+## Output file naming
+
+The manifest filename is derived from the output filename:
+
+| Output | Manifest |
+|--------|----------|
+| `StyleSheet.luau` | `StyleSheet.manifest.json` |
+| `dist/app/styles.luau` | `dist/app/styles.manifest.json` |
+| `output.rbxmx` | `output.manifest.json` |
+
+The manifest is always named by replacing the output extension with `.manifest.json`.
+
+## Programmatic API
+
+You can access manifest data when using rbx-css as a library:
+
+```typescript
+import { compile, generateManifest } from 'rbx-css';
+
+const result = compile(
+  [{ filename: 'styles.css', content: cssCode }],
+  { name: 'StyleSheet', warnLevel: 'all' }
+);
+
+// Access overflow scroll classes from IR
+const overflowScrollClasses = new Map<string, boolean>();
+for (const rule of result.ir.rules) {
+  // Check if rule has overflow: scroll...
+}
+
+// Generate manifest
+const manifest = generateManifest(overflowScrollClasses);
+
+console.log(manifest.classes);
+console.log(manifest.elementMap);
+```
+
+## Best practices
+
+<Tip>
+**Always use `--manifest` when building for TSX/JSX** - This ensures your component compiler has the metadata it needs to generate correct instance types.
+</Tip>
+
+<Tip>
+**Commit manifest files to version control** - Manifests are deterministic and help track which classes have special behaviors like `overflowScroll`.
+</Tip>
+
+<Tip>
+**Use manifest for validation** - Build tools can validate that all referenced class names exist in the stylesheet by checking the manifest.
+</Tip>

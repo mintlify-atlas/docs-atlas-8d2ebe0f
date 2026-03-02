@@ -1,0 +1,289 @@
+---
+title: Rojo integration
+description: Integrate rbx-css into your Rojo project workflow
+---
+
+## Overview
+
+rbx-css integrates seamlessly with Rojo projects, allowing you to compile CSS to `.rbxmx` model files or `.luau` modules that sync directly into Roblox Studio.
+
+## Project structure
+
+A typical Rojo project with rbx-css follows this structure:
+
+```
+my-project/
+├── src/
+│   ├── ui/
+│   │   ├── styles/
+│   │   │   ├── base.css
+│   │   │   ├── theme-dark.css
+│   │   │   └── components.css
+│   │   └── components/
+│   │       └── App.tsx
+│   └── server/
+├── out/
+│   └── ui/
+│       └── styles/
+│           ├── StyleSheet.rbxmx
+│           └── DarkTheme.rbxmx
+├── default.project.json
+└── package.json
+```
+
+<Note>
+  Keep your source CSS files in `src/` and compile output to `out/` to keep your project organized.
+</Note>
+
+## Setup
+
+<Steps>
+  <Step title="Install rbx-css">
+    Add rbx-css to your project:
+
+    ```bash
+    npm install rbx-css
+    # or
+    bun add rbx-css
+    ```
+  </Step>
+
+  <Step title="Configure output directory">
+    Create an output directory for compiled stylesheets:
+
+    ```bash
+    mkdir -p out/ui/styles
+    ```
+  </Step>
+
+  <Step title="Update default.project.json">
+    Add the compiled stylesheets to your Rojo configuration:
+
+    ```json default.project.json
+    {
+      "name": "my-project",
+      "tree": {
+        "$className": "DataModel",
+        "ReplicatedStorage": {
+          "UI": {
+            "$path": "out/ui"
+          },
+          "Styles": {
+            "$path": "out/ui/styles"
+          }
+        },
+        "StarterGui": {
+          "ScreenGui": {
+            "$className": "ScreenGui",
+            "$path": "src/ui/components"
+          }
+        }
+      }
+    }
+    ```
+  </Step>
+
+  <Step title="Add build scripts">
+    Add compilation scripts to your `package.json`:
+
+    ```json package.json
+    {
+      "scripts": {
+        "build:styles": "rbx-css compile src/ui/styles/*.css -o out/ui/styles/StyleSheet.rbxmx",
+        "watch:styles": "rbx-css watch src/ui/styles -o out/ui/styles/StyleSheet.rbxmx",
+        "dev": "npm run watch:styles"
+      }
+    }
+    ```
+  </Step>
+</Steps>
+
+## Output formats
+
+### RBXMX (recommended for Rojo)
+
+Generating `.rbxmx` files allows Rojo to sync StyleSheet instances directly into Studio:
+
+```bash
+rbx-css compile styles.css -o StyleSheet.rbxmx
+```
+
+<Note>
+  RBXMX output is experimental. While functional, StyleRule properties are encoded as XML comments. The Luau format is recommended for production use.
+</Note>
+
+### Luau modules
+
+Generate `.luau` module files that return a factory function:
+
+```bash
+rbx-css compile styles.css -o StyleSheet.luau
+```
+
+The generated module exports a `createStyleSheet()` function:
+
+```lua
+local createStyleSheet = require(ReplicatedStorage.Styles.StyleSheet)
+local sheet = createStyleSheet()
+sheet.Parent = game:GetService("ReplicatedStorage")
+```
+
+## Multiple stylesheets
+
+### Merging multiple CSS files
+
+Compile multiple CSS files into a single StyleSheet:
+
+```bash
+rbx-css compile base.css theme.css components.css -o StyleSheet.rbxmx
+```
+
+All selectors and rules from the input files are merged in order.
+
+### Separate theme files
+
+For projects with multiple themes, generate separate StyleSheet files:
+
+```bash
+# Base styles
+rbx-css compile src/ui/styles/base.css -o out/ui/styles/Base.rbxmx
+
+# Dark theme
+rbx-css compile src/ui/styles/theme-dark.css -o out/ui/styles/DarkTheme.rbxmx --name "DarkTheme"
+
+# Light theme  
+rbx-css compile src/ui/styles/theme-light.css -o out/ui/styles/LightTheme.rbxmx --name "LightTheme"
+```
+
+Update your Rojo config:
+
+```json default.project.json
+{
+  "tree": {
+    "ReplicatedStorage": {
+      "Styles": {
+        "$path": "out/ui/styles"
+      }
+    }
+  }
+}
+```
+
+## Hot reloading
+
+Combine rbx-css watch mode with Rojo's hot reloading for rapid development:
+
+<Steps>
+  <Step title="Start rbx-css watch mode">
+    ```bash
+    rbx-css watch src/ui/styles -o out/ui/styles/StyleSheet.rbxmx
+    ```
+  </Step>
+
+  <Step title="Start Rojo serve">
+    In a separate terminal:
+
+    ```bash
+    rojo serve
+    ```
+  </Step>
+
+  <Step title="Connect from Studio">
+    Use the Rojo Studio plugin to connect to `localhost:34872`.
+  </Step>
+
+  <Step title="Edit CSS files">
+    When you save a CSS file:
+    1. rbx-css recompiles the stylesheet
+    2. Rojo detects the `.rbxmx` change
+    3. The StyleSheet updates in Studio automatically
+  </Step>
+</Steps>
+
+<Tip>
+  Use a process manager like `concurrently` to run both watch modes together:
+
+  ```json package.json
+  {
+    "scripts": {
+      "dev": "concurrently \"rbx-css watch src/ui/styles -o out/ui/styles/StyleSheet.rbxmx\" \"rojo serve\""
+    }
+  }
+  ```
+</Tip>
+
+## Example configuration
+
+Complete example for a Rojo + rbx-css project:
+
+```json default.project.json
+{
+  "name": "my-game",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "Packages": {
+        "$path": "node_modules/@rbxts"
+      },
+      "Styles": {
+        "$path": "out/ui/styles"
+      },
+      "UI": {
+        "$path": "out/ui/components"
+      }
+    },
+    "ServerScriptService": {
+      "$path": "src/server"
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "$path": "src/client"
+      }
+    }
+  }
+}
+```
+
+```json package.json
+{
+  "name": "my-game",
+  "scripts": {
+    "build:styles": "rbx-css compile src/ui/styles/*.css -o out/ui/styles/StyleSheet.rbxmx",
+    "watch:styles": "rbx-css watch src/ui/styles -o out/ui/styles/StyleSheet.rbxmx",
+    "serve": "rojo serve",
+    "build": "rojo build -o game.rbxl",
+    "dev": "concurrently \"npm run watch:styles\" \"npm run serve\""
+  },
+  "dependencies": {
+    "rbx-css": "latest"
+  },
+  "devDependencies": {
+    "concurrently": "^8.0.0"
+  }
+}
+```
+
+## Troubleshooting
+
+### StyleSheet not appearing in Studio
+
+1. Check that the output file was generated in `out/ui/styles/`
+2. Verify your `default.project.json` path is correct
+3. Restart Rojo serve and reconnect from Studio
+4. Check the Rojo output window for sync errors
+
+### Changes not hot reloading
+
+1. Ensure both `rbx-css watch` and `rojo serve` are running
+2. Check that the CSS file path is being watched (watch mode logs changes)
+3. Verify the output path matches your Rojo configuration
+4. Try manually syncing in Studio using the Rojo plugin
+
+### Compilation errors
+
+If rbx-css fails to compile:
+
+1. Check the terminal output for specific error messages
+2. Validate your CSS syntax
+3. Use `--warn all` to see detailed warnings
+4. Review unsupported properties in the [CSS mapping](/css/properties) reference

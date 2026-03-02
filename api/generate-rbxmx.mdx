@@ -1,0 +1,123 @@
+---
+title: generateRBXMX()
+description: Generate RBXMX XML from a StyleSheet intermediate representation
+---
+
+The `generateRBXMX()` function generates RBXMX XML model file content from a compiled StyleSheetIR. The output can be saved as a `.rbxmx` file and imported into Roblox Studio.
+
+<Warning>
+  RBXMX output is currently **experimental**. StyleRule properties are emitted as XML comments rather than fully encoded RBXMX properties. The [Luau format](/api/generate-luau) is recommended for production use.
+</Warning>
+
+## Signature
+
+```ts
+function generateRBXMX(ir: StyleSheetIR): string
+```
+
+## Parameters
+
+<ParamField path="ir" type="StyleSheetIR" required>
+  The compiled intermediate representation from `compile()`. See [types](/api/types) for the full structure
+</ParamField>
+
+## Returns
+
+<ResponseField name="rbxmx" type="string">
+  Generated RBXMX XML content as a string. The output contains a `StyleSheet` instance with child `StyleRule` instances
+</ResponseField>
+
+## Example
+
+```ts
+import { compile, generateRBXMX } from "rbx-css";
+
+const result = compile(
+  [{ filename: "styles.css", content: "div { background-color: red; }" }],
+  { name: "MyStyleSheet", warnLevel: "all", strict: false }
+);
+
+const rbxmx = generateRBXMX(result.ir);
+
+console.log(rbxmx);
+// <roblox version="4">
+//   <Item class="StyleSheet" referent="RBX0001">
+//     <Properties>
+//       <string name="Name">MyStyleSheet</string>
+//     </Properties>
+//     ...
+//   </Item>
+// </roblox>
+```
+
+## Output structure
+
+The generated RBXMX follows this structure:
+
+```xml
+<roblox version="4">
+  <Item class="StyleSheet" referent="RBX0001">
+    <Properties>
+      <string name="Name">MyStyleSheet</string>
+    </Properties>
+    
+    <!-- Tokens -->
+    <!-- --primary: #335fff -->
+    <!-- --radius: UDim(0, 8) -->
+    
+    <Item class="StyleRule" referent="RBX0002">
+      <Properties>
+        <string name="Selector">.card</string>
+      </Properties>
+      <!-- Properties:
+        BackgroundColor3 = Color3(255, 0, 0)
+        Size = UDim2(1, 0, 0, 200)
+      -->
+    </Item>
+  </Item>
+  
+  <!-- Theme StyleSheets (if present) -->
+  <Item class="StyleSheet" referent="RBX0003">
+    <Properties>
+      <string name="Name">MyStyleSheet_dark</string>
+    </Properties>
+  </Item>
+</roblox>
+```
+
+## Limitations
+
+<Warning>
+  The RBXMX format currently has the following limitations:
+</Warning>
+
+- **Properties as comments** — StyleRule properties are written as XML comments instead of encoded RBXMX property values. This means you cannot directly use the imported model in-game without manual configuration
+- **No property encoding** — Token attributes and StyleRule properties require manual Roblox Studio setup
+- **Experimental status** — This format may change in future versions
+
+## Use cases
+
+Despite the limitations, RBXMX output is useful for:
+
+- **Visual inspection** — View the structure of the compiled StyleSheet in Roblox Studio
+- **Manual editing** — Create a base structure that you can configure manually
+- **Debugging** — Compare the generated structure with expected output
+
+For production use, the [Luau format](/api/generate-luau) is recommended as it generates fully functional code.
+
+## XML escaping
+
+The following characters in names and values are automatically escaped:
+
+- `&` → `&amp;`
+- `<` → `&lt;`
+- `>` → `&gt;`
+- `"` → `&quot;`
+
+This ensures that selectors like `.w-\[22px\]` or special characters in token names are safely encoded.
+
+## Related
+
+- [compile()](/api/compile) — Compile CSS to IR
+- [generateLuau()](/api/generate-luau) — Generate Luau code (recommended)
+- [Types reference](/api/types) — Full type definitions

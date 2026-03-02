@@ -1,0 +1,114 @@
+---
+title: compile()
+description: Compile CSS sources into a StyleSheet intermediate representation
+---
+
+The `compile()` function is the core compiler that transforms CSS into rbx-css's intermediate representation (IR). It parses CSS files, extracts tokens, maps selectors and properties to Roblox equivalents, and returns a structured StyleSheetIR object.
+
+## Signature
+
+```ts
+function compile(
+  sources: Array<{ filename: string; content: string }>,
+  options: CompileOptions
+): CompileResult
+```
+
+## Parameters
+
+<ParamField path="sources" type="Array<{ filename: string; content: string }>" required>
+  Array of CSS source files to compile. Each object contains:
+  
+  <Expandable title="Source object properties">
+    <ParamField path="filename" type="string" required>
+      The filename (used for warning messages)
+    </ParamField>
+    <ParamField path="content" type="string" required>
+      The CSS source code content
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField path="options" type="CompileOptions" required>
+  Compiler configuration options
+  
+  <Expandable title="CompileOptions properties">
+    <ParamField path="name" type="string" required>
+      Name for the generated StyleSheet instance
+    </ParamField>
+    <ParamField path="warnLevel" type="WarningLevel" required>
+      Warning verbosity level: `"all"`, `"unsupported"`, or `"none"`
+    </ParamField>
+    <ParamField path="strict" type="boolean" required>
+      When `true`, warnings are treated as errors
+    </ParamField>
+    <ParamField path="includeBaseRules" type="boolean">
+      When `false`, skip auto-generated base element rules (e.g., TextLabel defaults). Defaults to `true`
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Returns
+
+<ResponseField name="CompileResult" type="object">
+  Compilation result containing the IR, warnings, and metadata
+  
+  <Expandable title="CompileResult properties">
+    <ResponseField name="ir" type="StyleSheetIR">
+      The compiled intermediate representation. See [types](/api/types) for full structure
+    </ResponseField>
+    <ResponseField name="warnings" type="WarningCollector">
+      Warning collector with any diagnostics from compilation. Use `.getWarnings()` to retrieve warnings or `.format()` to display them
+    </ResponseField>
+    <ResponseField name="overflowScrollClasses" type="Map<string, boolean>">
+      Map of class names to whether they use `overflow: scroll`. Used for manifest generation
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example
+
+```ts
+import { compile } from "rbx-css";
+
+const result = compile(
+  [
+    {
+      filename: "styles.css",
+      content: "div { background-color: red; }"
+    }
+  ],
+  {
+    name: "MyStyleSheet",
+    warnLevel: "all",
+    strict: false
+  }
+);
+
+// Access the IR
+console.log(result.ir.name); // "MyStyleSheet"
+console.log(result.ir.rules.length); // 1
+
+// Check for warnings
+if (result.warnings.getWarnings().length > 0) {
+  console.log(result.warnings.format());
+}
+```
+
+## Compilation process
+
+The compile function performs the following steps:
+
+1. **Parse CSS** — All source files are parsed using lightningcss
+2. **Extract tokens** — CSS custom properties from `:root` are extracted as tokens
+3. **Extract themes** — Theme-specific tokens from `[data-theme]` or `@media (prefers-color-scheme)` are identified
+4. **Map selectors** — CSS selectors are mapped to Roblox selector syntax (e.g., `div` → `Frame`)
+5. **Map properties** — CSS properties are mapped to Roblox properties and pseudo-instances
+6. **Generate base rules** — Default element rules are prepended (unless `includeBaseRules: false`)
+7. **Generate compound selectors** — Width/height combinations are merged to fix Roblox's single `Size` property
+
+## Related
+
+- [generateLuau()](/api/generate-luau) — Generate Luau code from the IR
+- [generateRBXMX()](/api/generate-rbxmx) — Generate RBXMX XML from the IR
+- [Types reference](/api/types) — Full type definitions

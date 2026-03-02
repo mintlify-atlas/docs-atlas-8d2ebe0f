@@ -1,0 +1,215 @@
+---
+title: Introduction to rbx-css
+description: Write standard CSS, get Roblox StyleSheet instances. A modern CSS to Roblox compiler that brings familiar web styling to your Roblox projects.
+---
+
+<img
+  className="block"
+  src="/images/hero-light.svg"
+  alt="rbx-css Hero"
+/>
+
+## What is rbx-css?
+
+rbx-css is a CSS to Roblox StyleSheet compiler that lets you write standard CSS and automatically converts it to Luau modules or `.rbxmx` model files that create Roblox `StyleSheet` instances.
+
+Instead of manually creating StyleSheets in Luau, you can leverage the power and familiarity of CSS - complete with design tokens, pseudo-classes, nesting, and modern CSS features.
+
+<CardGroup cols={2}>
+  <Card
+    title="Installation"
+    icon="download"
+    href="/installation"
+  >
+    Get started with npm, yarn, bun, or pnpm
+  </Card>
+  <Card
+    title="Quick start"
+    icon="bolt"
+    href="/quickstart"
+  >
+    Build your first StyleSheet in under 5 minutes
+  </Card>
+  <Card
+    title="CSS mapping"
+    icon="map"
+    href="/css-mapping"
+  >
+    Learn how CSS translates to Roblox
+  </Card>
+  <Card
+    title="CLI reference"
+    icon="terminal"
+    href="/cli-reference"
+  >
+    Complete command-line interface documentation
+  </Card>
+</CardGroup>
+
+## Why rbx-css?
+
+<CardGroup cols={3}>
+  <Card title="Familiar syntax" icon="code">
+    Use standard CSS you already know - selectors, properties, nesting, and more
+  </Card>
+  <Card title="Design tokens" icon="palette">
+    Define reusable CSS variables that automatically become StyleSheet attributes
+  </Card>
+  <Card title="Type-safe output" icon="shield-check">
+    Compile to Luau modules with full type safety for your Roblox projects
+  </Card>
+  <Card title="Theme support" icon="moon">
+    Built-in dark mode and theme switching with `data-theme` and media queries
+  </Card>
+  <Card title="Watch mode" icon="eye">
+    Automatically recompile on file changes during development
+  </Card>
+  <Card title="Pseudo-instances" icon="layer-group">
+    CSS properties automatically create UICorner, UIStroke, UIPadding, and more
+  </Card>
+</CardGroup>
+
+## Key features
+
+### Smart element mapping
+
+HTML elements are automatically mapped to their Roblox equivalents:
+
+```css
+/* CSS */
+div { background-color: white; }
+button { color: blue; }
+span { font-size: 16px; }
+```
+
+Becomes `Frame`, `TextButton`, and `TextLabel` rules in your StyleSheet.
+
+### Design tokens with CSS variables
+
+Define your design system once, use it everywhere:
+
+```css
+:root {
+  --primary: #335fff;
+  --radius: 8px;
+  --gap: 12px;
+}
+
+.card {
+  background-color: var(--primary);
+  border-radius: var(--radius);
+  gap: var(--gap);
+}
+```
+
+Tokens are automatically typed as `Color3`, `UDim`, `number`, or `string`.
+
+### Automatic pseudo-instances
+
+CSS properties that map to Roblox child instances are automatically handled:
+
+- `border-radius` → `UICorner`
+- `border`, `outline` → `UIStroke`  
+- `padding` → `UIPadding`
+- `display: flex` → `UIListLayout`
+- `linear-gradient()` → `UIGradient`
+- `transform: scale()` → `UIScale`
+- And more!
+
+### Modern CSS features
+
+<AccordionGroup>
+  <Accordion title="CSS nesting">
+    ```css
+    .card {
+      background-color: white;
+
+      &:hover {
+        background-color: #f0f0f0;
+      }
+
+      > span {
+        color: gray;
+      }
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Pseudo-classes">
+    CSS pseudo-classes map to Roblox states:
+    - `:hover` → `:Hover`
+    - `:active` → `:Press`
+    - `:focus`, `:disabled` → `:NonDefault`
+  </Accordion>
+  
+  <Accordion title="Combinators">
+    Support for child (`>`), descendant (` `), and more:
+    ```css
+    .card > span { color: white; }
+    .container button { margin: 4px; }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Output formats
+
+### Luau modules (recommended)
+
+Generates a `.luau` module that exports a `createStyleSheet()` factory function:
+
+```bash
+rbx-css compile styles.css -o StyleSheet.luau
+```
+
+This is the recommended format for production use.
+
+### RBXMX model files
+
+Generates a `.rbxmx` model file for direct import into Roblox Studio:
+
+```bash
+rbx-css compile styles.css -o StyleSheet.rbxmx
+```
+
+<Warning>
+  RBXMX output is currently **experimental**. The Luau format is recommended for production.
+</Warning>
+
+## Use cases
+
+<Steps>
+  <Step title="Roblox UI frameworks">
+    Use rbx-css with UI frameworks like rbx-tsx or Fusion to style your components with familiar CSS syntax.
+  </Step>
+  
+  <Step title="Design systems">
+    Build and maintain consistent design systems using CSS variables for colors, spacing, and typography.
+  </Step>
+  
+  <Step title="Theme switching">
+    Implement light/dark modes or multiple themes with built-in theme support.
+  </Step>
+  
+  <Step title="Rapid prototyping">
+    Quickly iterate on UI designs using CSS instead of manually coding StyleSheets.
+  </Step>
+</Steps>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Install rbx-css"
+    icon="download"
+    href="/installation"
+  >
+    Set up rbx-css in your project
+  </Card>
+  <Card
+    title="Follow the quick start"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Create your first StyleSheet
+  </Card>
+</CardGroup>

@@ -1,0 +1,379 @@
+---
+title: CSS nesting
+description: Write cleaner styles with standard CSS nesting syntax
+---
+
+rbx-css supports standard CSS nesting, allowing you to write more organized and maintainable styles by nesting related rules inside parent selectors.
+
+## Basic nesting
+
+Nest child selectors inside parent blocks using the `&` symbol:
+
+```css
+.card {
+  background-color: white;
+  padding: 16px;
+  border-radius: 8px;
+  
+  &:hover {
+    background-color: #f0f0f0;
+  }
+  
+  & > span {
+    color: gray;
+    font-size: 14px;
+  }
+}
+```
+
+This is equivalent to:
+
+```css
+.card {
+  background-color: white;
+  padding: 16px;
+  border-radius: 8px;
+}
+
+.card:hover {
+  background-color: #f0f0f0;
+}
+
+.card > span {
+  color: gray;
+  font-size: 14px;
+}
+```
+
+## The nesting selector (`&`)
+
+The `&` symbol represents the parent selector and can be used to:
+
+### Append pseudo-classes
+
+```css
+.button {
+  background-color: blue;
+  
+  &:hover {
+    background-color: darkblue;
+  }
+  
+  &:active {
+    transform: scale(0.95);
+  }
+}
+```
+
+Compiles to: `.button:Hover`, `.button:Press`
+
+### Add modifiers
+
+```css
+.button {
+  background-color: gray;
+  
+  &.primary {
+    background-color: blue;
+  }
+  
+  &.danger {
+    background-color: red;
+  }
+}
+```
+
+Compiles to: `.button.primary`, `.button.danger`
+
+### Create compound selectors
+
+```css
+TextButton {
+  padding: 8px;
+  
+  &.large {
+    padding: 16px;
+  }
+}
+```
+
+Compiles to: `TextButton`, `TextButton.large`
+
+## Child combinators
+
+Use child and descendant combinators with nesting:
+
+```css
+.card {
+  background-color: white;
+  
+  /* Direct child (>) */
+  > .header {
+    font-weight: bold;
+    font-size: 18px;
+  }
+  
+  /* Descendant (space) */
+  .content {
+    padding: 8px;
+  }
+  
+  /* Descendant element */
+  span {
+    color: gray;
+  }
+}
+```
+
+Compiles to:
+- `.card > .header`
+- `.card .content`
+- `.card TextLabel` (span maps to TextLabel)
+
+## Implicit nesting
+
+Without `&`, nested selectors create descendant relationships:
+
+```css
+.container {
+  display: flex;
+  
+  /* Implicit descendant - same as "& .item" */
+  .item {
+    flex-grow: 1;
+  }
+}
+```
+
+This is equivalent to:
+
+```css
+.container {
+  display: flex;
+}
+
+.container .item {
+  flex-grow: 1;
+}
+```
+
+## Multiple levels of nesting
+
+Nest as deeply as needed for complex component structures:
+
+```css
+.card {
+  background-color: white;
+  border-radius: 8px;
+  
+  .header {
+    padding: 16px;
+    border-bottom: 1px solid #e0e0e0;
+    
+    h2 {
+      font-size: 18px;
+      font-weight: bold;
+      
+      &:hover {
+        color: blue;
+      }
+    }
+  }
+  
+  .content {
+    padding: 16px;
+    
+    p {
+      line-height: 1.5;
+      color: #333;
+    }
+  }
+}
+```
+
+This creates selectors like:
+- `.card`
+- `.card .header`
+- `.card .header TextLabel` (from h2)
+- `.card .header TextLabel:Hover`
+- `.card .content`
+- `.card .content TextLabel` (from p)
+
+## Nesting with pseudo-instances
+
+Nested rules that generate pseudo-instances work correctly:
+
+```css
+.card {
+  background-color: white;
+  border-radius: 8px;  /* Creates .card::UICorner */
+  
+  &:hover {
+    background-color: #f0f0f0;
+    border-radius: 12px;  /* Creates .card:Hover::UICorner */
+  }
+}
+```
+
+Both the base `.card` and the hover state `.card:Hover` get their own `::UICorner` rules.
+
+## Nesting in media queries
+
+Combine nesting with theme media queries:
+
+```css
+.button {
+  background-color: white;
+  color: black;
+  
+  &:hover {
+    background-color: #f0f0f0;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .button {
+    background-color: #1a1a2e;
+    color: white;
+    
+    &:hover {
+      background-color: #2a2a4e;
+    }
+  }
+}
+```
+
+<Note>
+Media query nesting is supported, but remember that rbx-css only processes `prefers-color-scheme` media queries for theming. Other media queries are ignored.
+</Note>
+
+## Common patterns
+
+### Component variations
+
+```css
+.button {
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  
+  /* Size variations */
+  &.small {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+  
+  &.large {
+    padding: 12px 24px;
+    font-size: 16px;
+  }
+  
+  /* Color variations */
+  &.primary {
+    background-color: blue;
+    color: white;
+  }
+  
+  &.danger {
+    background-color: red;
+    color: white;
+  }
+  
+  /* States */
+  &:hover {
+    opacity: 0.9;
+  }
+  
+  &:active {
+    transform: scale(0.98);
+  }
+}
+```
+
+### Layout components
+
+```css
+.sidebar {
+  width: 250px;
+  background-color: white;
+  border-right: 1px solid #e0e0e0;
+  
+  .nav {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px;
+    
+    .nav-item {
+      padding: 8px;
+      border-radius: 4px;
+      
+      &:hover {
+        background-color: #f0f0f0;
+      }
+      
+      &.active {
+        background-color: blue;
+        color: white;
+      }
+    }
+  }
+}
+```
+
+### Typography hierarchies
+
+```css
+.article {
+  line-height: 1.6;
+  
+  h1 {
+    font-size: 32px;
+    font-weight: bold;
+    color: #1a1a2e;
+  }
+  
+  h2 {
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+  }
+  
+  p {
+    font-size: 16px;
+    color: #555;
+    
+    & + p {
+      /* Adjacent paragraph spacing */
+      /* Note: + combinator not supported in Roblox */
+    }
+  }
+}
+```
+
+## Implementation details
+
+CSS nesting is handled during the parsing phase in `src/parser/css-parser.ts`:
+
+1. **Nesting detection** - The lightningcss parser identifies nested rules and `{type: "nesting"}` tokens
+2. **Selector stack** - A stack tracks the current nesting context as the parser traverses the CSS tree
+3. **Selector resolution** - When a nested rule is found:
+   - If it contains `&`, the nesting token is replaced with parent selectors
+   - If no `&`, parent selectors are prepended with a descendant combinator
+4. **Flattening** - Nested rules are resolved into flat selectors before being passed to the property mapper
+
+The result is that by the time rules reach the IR generation phase, all nesting has been resolved into standard flat selectors that map to Roblox StyleRule selectors.
+
+## Best practices
+
+<Tip>
+**Keep nesting shallow** - While deep nesting is supported, 2-3 levels is usually sufficient. Deeper nesting can make styles harder to override and understand.
+</Tip>
+
+<Tip>
+**Use nesting for state variations** - The `&` selector is especially useful for pseudo-classes like `:hover` and modifier classes like `&.primary`.
+</Tip>
+
+<Tip>
+**Group related rules** - Nesting helps organize component styles by keeping child elements and state variations together.
+</Tip>

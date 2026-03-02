@@ -1,0 +1,582 @@
+---
+title: Pseudo-instances
+description: How CSS properties map to Roblox UI modifier instances
+---
+
+Certain CSS properties require child UI modifier instances in Roblox (like `UICorner`, `UIStroke`, `UIPadding`). rbx-css automatically generates `::PseudoInstance` style rules for these properties.
+
+## UICorner
+
+The `border-radius` property creates a `::UICorner` pseudo-instance rule.
+
+### Border radius
+
+```css input.css
+.card {
+  border-radius: 8px;
+}
+
+.circle {
+  border-radius: 50%;
+}
+
+.mixed-units {
+  border-radius: 0.5rem; /* 8px */
+}
+```
+
+```lua output.luau
+-- Rule: .card::UICorner
+local rule1 = Instance.new("StyleRule")
+rule1.Selector = ".card::UICorner"
+rule1:SetProperty("CornerRadius", UDim.new(0, 8))
+
+-- Rule: .circle::UICorner
+local rule2 = Instance.new("StyleRule")
+rule2.Selector = ".circle::UICorner"
+rule2:SetProperty("CornerRadius", UDim.new(0.5, 0))
+
+-- Rule: .mixed-units::UICorner
+local rule3 = Instance.new("StyleRule")
+rule3.Selector = ".mixed-units::UICorner"
+rule3:SetProperty("CornerRadius", UDim.new(0, 8))
+```
+
+| CSS Property | UICorner Property | Supported Units |
+|--------------|-------------------|----------------|
+| `border-radius` | `CornerRadius` | `px`, `%`, `rem`, `em` |
+
+<Warning>
+Roblox UICorner only supports uniform corner radius. If you specify different radii per corner (e.g., `border-radius: 8px 0 0 8px`), rbx-css uses the top-left value and emits a warning.
+</Warning>
+
+## UIStroke
+
+The `border` and `outline` properties create `::UIStroke` pseudo-instance rules.
+
+### Border
+
+```css input.css
+.card {
+  border: 2px solid #333;
+}
+
+.separate {
+  border-width: 1px;
+  border-color: rgba(0, 0, 0, 0.1);
+  border-style: solid;
+}
+```
+
+```lua output.luau
+-- Rule: .card::UIStroke
+local rule1 = Instance.new("StyleRule")
+rule1.Selector = ".card::UIStroke"
+rule1:SetProperties({
+  Thickness = 2,
+  Color = Color3.fromRGB(51, 51, 51),
+  ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+})
+
+-- Rule: .separate::UIStroke
+local rule2 = Instance.new("StyleRule")
+rule2.Selector = ".separate::UIStroke"
+rule2:SetProperties({
+  Thickness = 1,
+  Color = Color3.fromRGB(0, 0, 0),
+  Transparency = 0.9,
+  ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+})
+```
+
+| CSS Property | UIStroke Property | Notes |
+|--------------|-------------------|-------|
+| `border-width` | `Thickness` | Pixel value only |
+| `border-color` | `Color` | With optional `Transparency` from alpha |
+| `border-style: solid` | Default | No action needed |
+| `border-style: none` | (skip rule) | No UIStroke created |
+
+### Outline
+
+```css input.css
+.focused {
+  outline: 2px solid blue;
+}
+```
+
+```lua output.luau
+-- Rule: .focused::UIStroke
+local rule = Instance.new("StyleRule")
+rule.Selector = ".focused::UIStroke"
+rule:SetProperties({
+  Thickness = 2,
+  Color = Color3.fromRGB(0, 0, 255),
+  ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
+})
+```
+
+The key difference: `outline` uses `ApplyStrokeMode.Contextual` instead of `Border`.
+
+<Warning>
+Roblox UIStroke doesn't support dashed or dotted borders. If you use `border-style: dashed` or `dotted`, rbx-css will use solid and emit a warning.
+</Warning>
+
+<Warning>
+Roblox only supports uniform borders. CSS properties like `border-top`, `border-left` with different widths/colors per side are not supported. The border shorthand applies to all sides.
+</Warning>
+
+## UIPadding
+
+The `padding` property creates a `::UIPadding` pseudo-instance rule.
+
+### Padding shorthand
+
+```css input.css
+.box-1 {
+  padding: 16px;
+}
+
+.box-2 {
+  padding: 12px 16px; /* vertical | horizontal */
+}
+
+.box-3 {
+  padding: 8px 12px 16px; /* top | horizontal | bottom */
+}
+
+.box-4 {
+  padding: 8px 12px 16px 20px; /* top | right | bottom | left */
+}
+```
+
+```lua output.luau
+-- Rule: .box-1::UIPadding
+rule1:SetProperties({
+  PaddingTop = UDim.new(0, 16),
+  PaddingBottom = UDim.new(0, 16),
+  PaddingLeft = UDim.new(0, 16),
+  PaddingRight = UDim.new(0, 16),
+})
+
+-- Rule: .box-2::UIPadding
+rule2:SetProperties({
+  PaddingTop = UDim.new(0, 12),
+  PaddingBottom = UDim.new(0, 12),
+  PaddingLeft = UDim.new(0, 16),
+  PaddingRight = UDim.new(0, 16),
+})
+
+-- Similar for box-3 and box-4...
+```
+
+### Individual padding sides
+
+```css input.css
+.box {
+  padding-top: 8px;
+  padding-right: 16px;
+  padding-bottom: 12px;
+  padding-left: 20px;
+}
+```
+
+```lua output.luau
+-- Rule: .box::UIPadding
+rule:SetProperties({
+  PaddingTop = UDim.new(0, 8),
+  PaddingRight = UDim.new(0, 16),
+  PaddingBottom = UDim.new(0, 12),
+  PaddingLeft = UDim.new(0, 20),
+})
+```
+
+### Logical padding properties
+
+```css input.css
+.box {
+  padding-inline: 16px; /* left + right in LTR */
+  padding-block: 12px;  /* top + bottom */
+}
+
+.box-2 {
+  padding-inline-start: 8px;  /* left in LTR */
+  padding-inline-end: 16px;   /* right in LTR */
+  padding-block-start: 12px;  /* top */
+  padding-block-end: 20px;    /* bottom */
+}
+```
+
+```lua output.luau
+-- Logical properties are converted to physical equivalents
+-- (LTR assumed for Roblox)
+rule1:SetProperties({
+  PaddingLeft = UDim.new(0, 16),
+  PaddingRight = UDim.new(0, 16),
+  PaddingTop = UDim.new(0, 12),
+  PaddingBottom = UDim.new(0, 12),
+})
+```
+
+| CSS Property | UIPadding Property | Supported Units |
+|--------------|--------------------|-----------------|
+| `padding-top` | `PaddingTop` | `px`, `%`, `rem`, `em` |
+| `padding-right` | `PaddingRight` | `px`, `%`, `rem`, `em` |
+| `padding-bottom` | `PaddingBottom` | `px`, `%`, `rem`, `em` |
+| `padding-left` | `PaddingLeft` | `px`, `%`, `rem`, `em` |
+
+## UIListLayout
+
+Flexbox properties create a `::UIListLayout` pseudo-instance rule.
+
+### Basic flex container
+
+```css input.css
+.container {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+```
+
+```lua output.luau
+-- Rule: .container::UIListLayout
+local rule = Instance.new("StyleRule")
+rule.Selector = ".container::UIListLayout"
+rule:SetProperties({
+  FillDirection = Enum.FillDirection.Horizontal,
+  HorizontalAlignment = Enum.HorizontalAlignment.Center,
+  VerticalAlignment = Enum.VerticalAlignment.Center,
+  Padding = UDim.new(0, 8),
+})
+```
+
+### Flex direction
+
+```css input.css
+.row {
+  flex-direction: row;
+}
+
+.column {
+  flex-direction: column;
+}
+```
+
+```lua output.luau
+rule1:SetProperty("FillDirection", Enum.FillDirection.Horizontal)
+rule2:SetProperty("FillDirection", Enum.FillDirection.Vertical)
+```
+
+| CSS Value | UIListLayout Property |
+|-----------|-----------------------|
+| `row` | `FillDirection = Horizontal` |
+| `row-reverse` | `FillDirection = Horizontal` (warning: reverse not supported) |
+| `column` | `FillDirection = Vertical` |
+| `column-reverse` | `FillDirection = Vertical` (warning: reverse not supported) |
+
+### Justify content (main axis)
+
+```css input.css
+.start {
+  justify-content: flex-start;
+}
+
+.center {
+  justify-content: center;
+}
+
+.end {
+  justify-content: flex-end;
+}
+
+.space-between {
+  justify-content: space-between;
+}
+```
+
+```lua output.luau
+-- For row direction:
+rule1:SetProperty("HorizontalAlignment", Enum.HorizontalAlignment.Left)
+rule2:SetProperty("HorizontalAlignment", Enum.HorizontalAlignment.Center)
+rule3:SetProperty("HorizontalAlignment", Enum.HorizontalAlignment.Right)
+rule4:SetProperty("HorizontalFlex", Enum.UIFlexAlignment.SpaceBetween)
+
+-- For column direction, uses VerticalAlignment instead
+```
+
+| CSS Value | Horizontal (row) | Vertical (column) |
+|-----------|------------------|-------------------|
+| `flex-start`, `start` | `HorizontalAlignment.Left` | `VerticalAlignment.Top` |
+| `center` | `HorizontalAlignment.Center` | `VerticalAlignment.Center` |
+| `flex-end`, `end` | `HorizontalAlignment.Right` | `VerticalAlignment.Bottom` |
+| `space-between` | `HorizontalFlex.SpaceBetween` | `VerticalFlex.SpaceBetween` |
+| `space-around` | `HorizontalFlex.SpaceAround` | `VerticalFlex.SpaceAround` |
+| `space-evenly` | `HorizontalFlex.SpaceEvenly` | `VerticalFlex.SpaceEvenly` |
+
+### Align items (cross axis)
+
+```css input.css
+.start {
+  align-items: flex-start;
+}
+
+.center {
+  align-items: center;
+}
+
+.stretch {
+  align-items: stretch;
+}
+```
+
+```lua output.luau
+-- For row direction (cross-axis is vertical):
+rule1:SetProperty("VerticalAlignment", Enum.VerticalAlignment.Top)
+rule2:SetProperty("VerticalAlignment", Enum.VerticalAlignment.Center)
+rule3:SetProperty("ItemLineAlignment", Enum.ItemLineAlignment.Stretch)
+```
+
+### Gap
+
+```css input.css
+.container {
+  gap: 8px; /* uniform gap */
+}
+```
+
+```lua output.luau
+rule:SetProperty("Padding", UDim.new(0, 8))
+```
+
+<Warning>
+Roblox UIListLayout only supports a single `Padding` value for gap. CSS `row-gap` and `column-gap` with different values are not supported - the row gap is used.
+</Warning>
+
+### Flex wrap
+
+```css input.css
+.container {
+  flex-wrap: wrap;
+}
+```
+
+```lua output.luau
+rule:SetProperty("Wraps", true)
+```
+
+## UIFlexItem
+
+Flex item properties on child elements create `::UIFlexItem` pseudo-instance rules.
+
+### Flex grow and shrink
+
+```css input.css
+.item {
+  flex-grow: 1;
+  flex-shrink: 0;
+}
+```
+
+```lua output.luau
+-- Rule: .item::UIFlexItem
+local rule = Instance.new("StyleRule")
+rule.Selector = ".item::UIFlexItem"
+rule:SetProperties({
+  FlexMode = Enum.UIFlexMode.Custom,
+  GrowRatio = 1,
+  ShrinkRatio = 0,
+})
+```
+
+### Align self
+
+```css input.css
+.item {
+  align-self: center;
+}
+```
+
+```lua output.luau
+rule:SetProperty("ItemLineAlignment", Enum.ItemLineAlignment.Center)
+```
+
+| CSS Value | UIFlexItem Property |
+|-----------|---------------------|
+| `flex-start`, `start` | `ItemLineAlignment.Start` |
+| `center` | `ItemLineAlignment.Center` |
+| `flex-end`, `end` | `ItemLineAlignment.End` |
+| `stretch` | `ItemLineAlignment.Stretch` |
+
+### Flex basis
+
+```css input.css
+.item {
+  flex-basis: 200px;
+}
+```
+
+```lua output.luau
+-- flex-basis is converted to Size on the element itself
+rule:SetProperty("Size", UDim2.new(0, 200, 0, 0)) -- for row direction
+```
+
+<Warning>
+`flex-basis` has no direct UIFlexItem equivalent. rbx-css maps it to the element's `Size` property in the flex direction. This may behave differently than CSS flexbox.
+</Warning>
+
+## UIGridLayout
+
+CSS Grid properties create a `::UIGridLayout` pseudo-instance rule.
+
+### Grid template columns
+
+```css input.css
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 100px);
+  gap: 8px;
+}
+```
+
+```lua output.luau
+-- Rule: .grid::UIGridLayout
+local rule = Instance.new("StyleRule")
+rule.Selector = ".grid::UIGridLayout"
+rule:SetProperties({
+  FillDirectionMaxCells = 3,
+  CellSize = UDim2.new(0, 100, 0, 100),
+  CellPadding = UDim2.new(0, 8, 0, 8),
+})
+```
+
+<Warning>
+Roblox UIGridLayout only supports uniform cell sizes. CSS Grid features like `fr` units, `minmax()`, named grid areas, and `grid-template-areas` are not supported.
+</Warning>
+
+## UIGradient
+
+Linear gradients in `background` or `background-image` create `::UIGradient` pseudo-instance rules.
+
+### Linear gradient
+
+```css input.css
+.gradient {
+  background: linear-gradient(90deg, #ff0099, #ffcc00);
+}
+
+.multi-stop {
+  background: linear-gradient(180deg, red 0%, yellow 50%, green 100%);
+}
+```
+
+```lua output.luau
+-- Rule: .gradient::UIGradient
+local rule1 = Instance.new("StyleRule")
+rule1.Selector = ".gradient::UIGradient"
+rule1:SetProperties({
+  Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 153)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 204, 0)),
+  }),
+  Rotation = 90,
+})
+
+-- Rule: .multi-stop::UIGradient with 3 color stops
+```
+
+| CSS Property | UIGradient Property | Notes |
+|--------------|---------------------|-------|
+| `linear-gradient(angle, ...)` | `Rotation` | Angle in degrees |
+| Color stops | `Color` (ColorSequence) | Position percentages map to keypoints |
+
+<Warning>
+Radial gradients (`radial-gradient()`) are not supported in Roblox. Only `linear-gradient()` is available.
+</Warning>
+
+## UIScale
+
+The `transform: scale()` CSS function creates a `::UIScale` pseudo-instance rule.
+
+### Scale transform
+
+```css input.css
+.scaled {
+  transform: scale(1.5);
+}
+
+.scaled-xy {
+  transform: scale(1.2, 0.8);
+}
+```
+
+```lua output.luau
+-- Rule: .scaled::UIScale
+rule1:SetProperty("Scale", 1.5)
+
+-- Rule: .scaled-xy::UIScale (averaged if x != y)
+rule2:SetProperty("Scale", 1.0) -- (1.2 + 0.8) / 2
+```
+
+<Warning>
+Roblox UIScale applies uniform scaling. If you use `scale(x, y)` with different values, rbx-css averages them and emits a warning.
+</Warning>
+
+## UIAspectRatioConstraint
+
+The `aspect-ratio` property creates a `::UIAspectRatioConstraint` pseudo-instance rule.
+
+### Aspect ratio
+
+```css input.css
+.square {
+  aspect-ratio: 1;
+}
+
+.video {
+  aspect-ratio: 16 / 9;
+}
+```
+
+```lua output.luau
+-- Rule: .square::UIAspectRatioConstraint
+rule1:SetProperty("AspectRatio", 1)
+
+-- Rule: .video::UIAspectRatioConstraint
+rule2:SetProperty("AspectRatio", 1.7778) -- 16/9
+```
+
+## UISizeConstraint
+
+Size constraint properties create a `::UISizeConstraint` pseudo-instance rule.
+
+### Min and max size
+
+```css input.css
+.constrained {
+  min-width: 200px;
+  max-width: 500px;
+  min-height: 100px;
+  max-height: 300px;
+}
+```
+
+```lua output.luau
+-- Rule: .constrained::UISizeConstraint
+local rule = Instance.new("StyleRule")
+rule.Selector = ".constrained::UISizeConstraint"
+rule:SetProperties({
+  MinSize = Vector2.new(200, 100),
+  MaxSize = Vector2.new(500, 300),
+})
+```
+
+| CSS Property | UISizeConstraint Property | Units |
+|--------------|---------------------------|-------|
+| `min-width`, `min-height` | `MinSize` (Vector2) | `px`, `rem` only |
+| `max-width`, `max-height` | `MaxSize` (Vector2) | `px`, `rem` only |
+
+<Warning>
+UISizeConstraint only accepts absolute pixel values. Percentage-based constraints are not supported.
+</Warning>

@@ -1,0 +1,284 @@
+---
+title: Units
+description: How CSS units convert to Roblox UDim and UDim2 values
+---
+
+rbx-css converts CSS length units into Roblox's `UDim` and `UDim2` types, which combine scale (relative) and offset (absolute) components.
+
+## UDim structure
+
+Roblox uses `UDim` for single-axis values and `UDim2` for two-axis values:
+
+```lua
+-- UDim: scale (0-1) + offset (pixels)
+UDim.new(0.5, 10)  -- 50% + 10px
+
+-- UDim2: X axis (scale, offset) + Y axis (scale, offset)
+UDim2.new(0.5, 10, 0, 200)  -- X: 50% + 10px, Y: 0% + 200px
+```
+
+## Absolute units
+
+### Pixels
+
+```css input.css
+.box {
+  width: 200px;
+  height: 100px;
+}
+```
+
+```lua output.luau
+-- Pixels map to offset component
+rule:SetProperty("Size", UDim2.new(0, 200, 0, 100))
+```
+
+| CSS | UDim Equivalent | Notes |
+|-----|-----------------|-------|
+| `200px` | `UDim.new(0, 200)` | Absolute offset |
+
+### Rem units
+
+rem units use a 16px base (same as most browsers):
+
+```css input.css
+.box {
+  width: 20rem;  /* 320px */
+  height: 5rem;  /* 80px */
+}
+```
+
+```lua output.luau
+rule:SetProperty("Size", UDim2.new(0, 320, 0, 80))
+```
+
+| CSS | Calculation | UDim Equivalent |
+|-----|-------------|------------------|
+| `1rem` | 1 × 16 = 16px | `UDim.new(0, 16)` |
+| `1.5rem` | 1.5 × 16 = 24px | `UDim.new(0, 24)` |
+| `0.5rem` | 0.5 × 16 = 8px | `UDim.new(0, 8)` |
+
+### Em units
+
+Em units are approximated as rem (16px base) since Roblox doesn't have cascading font sizes:
+
+```css input.css
+.box {
+  padding: 1em;  /* treated as 16px */
+}
+```
+
+```lua output.luau
+-- Em approximated as rem
+rule:SetProperty("PaddingTop", UDim.new(0, 16))
+```
+
+<Warning>
+CSS `em` units are parent-relative in browsers, but Roblox has no font-size inheritance. rbx-css treats `em` as `rem` (16px base) for predictable results.
+</Warning>
+
+## Relative units
+
+### Percentages
+
+```css input.css
+.box {
+  width: 50%;    /* half of parent width */
+  height: 100%;  /* full parent height */
+}
+```
+
+```lua output.luau
+-- Percentages map to scale component
+rule:SetProperty("Size", UDim2.new(0.5, 0, 1, 0))
+```
+
+| CSS | UDim Equivalent | Notes |
+|-----|-----------------|-------|
+| `100%` | `UDim.new(1, 0)` | Scale = 1 (full size) |
+| `50%` | `UDim.new(0.5, 0)` | Scale = 0.5 (half size) |
+| `25%` | `UDim.new(0.25, 0)` | Scale = 0.25 (quarter size) |
+
+### Viewport units
+
+vw (viewport width) and vh (viewport height) are treated as percentages:
+
+```css input.css
+.fullscreen {
+  width: 100vw;
+  height: 100vh;
+}
+
+.half {
+  width: 50vw;
+}
+```
+
+```lua output.luau
+rule1:SetProperty("Size", UDim2.new(1, 0, 1, 0))
+rule2:SetProperty("Size", UDim2.new(0.5, 0, 0, 0))
+```
+
+| CSS | Conversion | UDim Equivalent |
+|-----|------------|------------------|
+| `100vw` | 100 ÷ 100 = 1 | `UDim.new(1, 0)` |
+| `50vw` | 50 ÷ 100 = 0.5 | `UDim.new(0.5, 0)` |
+| `25vh` | 25 ÷ 100 = 0.25 | `UDim.new(0.25, 0)` |
+
+## Mixed units
+
+You can mix relative and absolute units using `calc()` (though calc expressions themselves aren't supported, you can achieve the same with separate properties):
+
+```css input.css
+.sidebar {
+  width: 30%;       /* scale */
+  padding-left: 16px; /* offset */
+}
+
+.offset {
+  left: 50%;
+  top: 100px;
+}
+```
+
+```lua output.luau
+rule1:SetProperty("Size", UDim2.new(0.3, 0, 0, 0))
+rule1:SetProperty("PaddingLeft", UDim.new(0, 16))
+
+rule2:SetProperty("Position", UDim2.new(0.5, 0, 0, 100))
+```
+
+## Auto sizing
+
+The `auto` keyword maps to Roblox's `AutomaticSize` property:
+
+```css input.css
+.auto-width {
+  width: auto;
+  height: 48px;
+}
+
+.auto-both {
+  width: auto;
+  height: auto;
+}
+```
+
+```lua output.luau
+-- Auto on one axis
+rule1:SetProperty("AutomaticSize", Enum.AutomaticSize.X)
+rule1:SetProperty("Size", UDim2.new(0, 0, 0, 48))
+
+-- Auto on both axes
+rule2:SetProperty("AutomaticSize", Enum.AutomaticSize.XY)
+```
+
+| CSS | Roblox Property | Value |
+|-----|-----------------|-------|
+| `width: auto` only | `AutomaticSize` | `Enum.AutomaticSize.X` |
+| `height: auto` only | `AutomaticSize` | `Enum.AutomaticSize.Y` |
+| Both auto | `AutomaticSize` | `Enum.AutomaticSize.XY` |
+
+## Unsupported units
+
+These CSS units are not supported and will emit warnings:
+
+| CSS Unit | Reason |
+|----------|--------|
+| `cm`, `mm`, `in`, `pt`, `pc` | Physical units have no meaning in screen-based UI |
+| `ch`, `ex` | Font-relative units not supported |
+| `vmin`, `vmax` | No Roblox equivalent |
+| `calc()` | Expression evaluation not supported |
+
+## Zero values
+
+Unitless zero is valid in CSS and maps to UDim zero:
+
+```css input.css
+.box {
+  padding: 0;
+  left: 0;
+}
+```
+
+```lua output.luau
+-- 0 without unit is treated as 0px
+rule:SetProperty("PaddingTop", UDim.new(0, 0))
+rule:SetProperty("Position", UDim2.new(0, 0, 0, 0))
+```
+
+## Complete examples
+
+### Example 1: Centered box
+
+```css input.css
+.centered {
+  width: 300px;
+  height: 200px;
+  left: 50%;
+  top: 50%;
+  transform-origin: center center;
+}
+```
+
+```lua output.luau
+rule:SetProperty("Size", UDim2.new(0, 300, 0, 200))
+rule:SetProperty("Position", UDim2.new(0.5, 0, 0.5, 0))
+rule:SetProperty("AnchorPoint", Vector2.new(0.5, 0.5))
+```
+
+### Example 2: Responsive container
+
+```css input.css
+.container {
+  width: 80%;          /* 80% of parent */
+  max-width: 1200px;   /* but never more than 1200px */
+  padding: 2rem;       /* 32px */
+}
+```
+
+```lua output.luau
+rule:SetProperty("Size", UDim2.new(0.8, 0, 0, 0))
+-- max-width creates a UISizeConstraint pseudo-instance
+constraintRule:SetProperty("MaxSize", Vector2.new(1200, math.huge))
+-- padding creates a UIPadding pseudo-instance
+paddingRule:SetProperty("PaddingTop", UDim.new(0, 32))
+-- ... other padding sides
+```
+
+### Example 3: Offset from corner
+
+```css input.css
+.notification {
+  right: 16px;   /* not supported directly */
+  top: 16px;
+  /* Instead, use: */
+  left: 100%;
+  transform-origin: right top;
+}
+```
+
+```lua output.luau
+-- Correct approach for right-aligned positioning:
+rule:SetProperty("Position", UDim2.new(1, -16, 0, 16))
+rule:SetProperty("AnchorPoint", Vector2.new(1, 0))
+```
+
+## Unit conversion reference
+
+| CSS | Scale | Offset | UDim |
+|-----|-------|--------|------|
+| `100px` | 0 | 100 | `UDim.new(0, 100)` |
+| `50%` | 0.5 | 0 | `UDim.new(0.5, 0)` |
+| `1rem` | 0 | 16 | `UDim.new(0, 16)` |
+| `2em` | 0 | 32 | `UDim.new(0, 32)` |
+| `75vw` | 0.75 | 0 | `UDim.new(0.75, 0)` |
+| `0` | 0 | 0 | `UDim.new(0, 0)` |
+
+## Best practices
+
+1. **Use pixels for fixed sizes**: Buttons, icons, borders
+2. **Use percentages for layouts**: Columns, responsive containers
+3. **Use rem for spacing**: Consistent padding and gaps across your UI
+4. **Avoid mixing units in calc()**: Not supported; use separate properties instead
+5. **Test with different screen sizes**: Remember that scale is relative to parent size

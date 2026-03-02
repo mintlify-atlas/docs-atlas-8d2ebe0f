@@ -1,0 +1,434 @@
+---
+title: Development workflow
+description: Best practices for using rbx-css in your development workflow
+---
+
+## Watch mode
+
+Watch mode automatically recompiles your CSS when files change, enabling a fast feedback loop during development.
+
+### Basic usage
+
+```bash
+rbx-css watch src/styles -o StyleSheet.luau
+```
+
+Watch mode:
+- Monitors all `.css` files in the specified directory (recursively)
+- Debounces changes (100ms) to avoid excessive recompilation
+- Logs which files changed and when compilation completes
+- Preserves all CLI flags (format, name, warnings)
+
+### Watching a single file
+
+```bash
+rbx-css watch styles.css -o output.luau
+```
+
+### Watching a directory
+
+```bash
+rbx-css watch src/ui/styles -o out/StyleSheet.rbxmx
+```
+
+All `.css` files in `src/ui/styles/` and its subdirectories will be watched and merged into a single output.
+
+### With format options
+
+```bash
+rbx-css watch src/styles -o StyleSheet.rbxmx --name "CoreSheet" --warn unsupported
+```
+
+## File organization
+
+### Recommended structure
+
+Organize your CSS files by purpose:
+
+```
+src/ui/styles/
+├── base.css           # Base element styles
+├── tokens.css         # Design tokens (:root variables)
+├── theme-dark.css     # Dark theme overrides
+├── theme-light.css    # Light theme overrides  
+└── components/
+    ├── button.css
+    ├── card.css
+    └── modal.css
+```
+
+### Base styles
+
+Define fundamental element styles and resets:
+
+```css base.css
+/* Base element defaults */
+Frame {
+  background-color: transparent;
+}
+
+TextLabel, TextButton {
+  font-family: "GothamSSm";
+  font-size: 14px;
+}
+
+TextButton {
+  background-color: transparent;
+  cursor: pointer;
+}
+```
+
+### Design tokens
+
+Centralize design decisions in CSS variables:
+
+```css tokens.css
+:root {
+  /* Colors */
+  --primary: #335fff;
+  --secondary: #ff0099;
+  --bg: #ffffff;
+  --text: #1a1a2e;
+  --border: #e0e0e0;
+
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  /* Typography */
+  --font-body: "GothamSSm";
+  --font-heading: "GothamSSm";
+  --text-sm: 12px;
+  --text-base: 14px;
+  --text-lg: 16px;
+  --text-xl: 18px;
+}
+```
+
+### Component styles
+
+Break components into separate files for maintainability:
+
+```css components/button.css
+button {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  width: auto;
+  height: auto;
+}
+
+button.primary {
+  background-color: var(--primary);
+  color: white;
+}
+
+button.primary:hover {
+  background-color: #4470ff;
+}
+
+button.secondary {
+  background-color: transparent;
+  border: 2px solid var(--primary);
+  color: var(--primary);
+}
+```
+
+## Build scripts
+
+### Development build
+
+Compile with full warnings for development:
+
+```json package.json
+{
+  "scripts": {
+    "dev": "rbx-css watch src/styles -o out/StyleSheet.rbxmx --warn all"
+  }
+}
+```
+
+### Production build
+
+Minify and use strict mode for production:
+
+```json package.json  
+{
+  "scripts": {
+    "build": "rbx-css compile src/styles/*.css -o dist/StyleSheet.luau --minify --strict"
+  }
+}
+```
+
+### Multiple outputs
+
+Generate both Luau and RBXMX formats:
+
+```json package.json
+{
+  "scripts": {
+    "build:luau": "rbx-css compile src/styles/*.css -o dist/StyleSheet.luau",
+    "build:rbxmx": "rbx-css compile src/styles/*.css -o dist/StyleSheet.rbxmx",
+    "build": "npm run build:luau && npm run build:rbxmx"
+  }
+}
+```
+
+## Theming workflow
+
+### Define base and theme variants
+
+Create a base tokens file and theme-specific overrides:
+
+```css tokens.css
+:root {
+  --bg: #ffffff;
+  --text: #1a1a2e;
+  --surface: #f5f5f5;
+}
+```
+
+```css theme-dark.css  
+[data-theme="dark"] {
+  --bg: #1a1a2e;
+  --text: #e1e1e1;
+  --surface: #2a2a4e;
+}
+```
+
+### Compile with themes
+
+```bash
+rbx-css compile tokens.css theme-dark.css components/*.css -o StyleSheet.luau
+```
+
+The output includes a `setTheme()` helper:
+
+```lua
+local createStyleSheet = require(ReplicatedStorage.StyleSheet)
+local sheet = createStyleSheet()
+
+-- Switch to dark theme
+sheet.setTheme("dark")
+```
+
+### Runtime theme switching
+
+Set the theme based on player preferences:
+
+```lua
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local createStyleSheet = require(ReplicatedStorage.StyleSheet)
+local sheet = createStyleSheet()
+sheet.Parent = ReplicatedStorage
+
+Players.PlayerAdded:Connect(function(player)
+  local prefersDark = player:GetAttribute("PrefersDarkTheme")
+  if prefersDark then
+    sheet.setTheme("dark")
+  else
+    sheet.setTheme("light")
+  end
+end)
+```
+
+## Manifest files
+
+Generate a manifest alongside your stylesheet for additional metadata:
+
+```bash
+rbx-css compile styles.css -o StyleSheet.luau --manifest
+```
+
+This creates `StyleSheet.manifest.json`:
+
+```json
+{
+  "version": "1.0.0",
+  "generatedAt": "2024-03-15T10:30:00.000Z",
+  "sourceFiles": [
+    "src/styles/base.css",
+    "src/styles/components.css"
+  ],
+  "scrollingFrameClasses": [".scrollable-list", ".chat-container"],
+  "tokens": {
+    "primary": "Color3",
+    "radius": "UDim"
+  }
+}
+```
+
+<Note>
+  Manifests are useful for tools like rbx-tsx that need to know which classes require `ScrollingFrame` instead of `Frame`.
+</Note>
+
+## CI/CD integration
+
+### GitHub Actions example
+
+```yaml .github/workflows/build.yml
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - run: npm install
+      
+      - name: Compile stylesheets
+        run: npm run build:styles -- --strict
+        
+      - name: Build Rojo project  
+        run: rojo build -o game.rbxl
+        
+      - uses: actions/upload-artifact@v3
+        with:
+          name: game
+          path: game.rbxl
+```
+
+### Strict mode in CI
+
+Use `--strict` to fail builds on CSS warnings:
+
+```bash
+rbx-css compile styles.css -o output.luau --strict
+```
+
+This ensures no unsupported properties or partial mappings make it to production.
+
+## Version control
+
+### Gitignore recommendations
+
+Ignore compiled output but commit source CSS:
+
+```gitignore .gitignore
+# Compiled stylesheets
+out/
+dist/
+*.luau
+*.rbxmx
+*.manifest.json
+
+# But keep source CSS
+!src/**/*.css
+```
+
+### Commit source CSS only
+
+Commit:
+- `src/ui/styles/*.css` - Source CSS files
+- `package.json` - Build scripts
+- `default.project.json` - Rojo configuration
+
+Don't commit:
+- `out/` or `dist/` - Generated files
+- `*.rbxmx` - Generated models
+- `*.manifest.json` - Generated metadata
+
+## Performance tips
+
+### Optimize watch mode
+
+Watch only the directories you need:
+
+```bash
+# Good - specific directory
+rbx-css watch src/ui/styles -o StyleSheet.luau
+
+# Avoid - watching too much
+rbx-css watch src -o StyleSheet.luau
+```
+
+### Split large stylesheets
+
+For very large projects, consider splitting into multiple StyleSheets:
+
+```bash
+# Core UI components
+rbx-css compile src/styles/core/*.css -o out/CoreStyles.rbxmx
+
+# Game-specific UI  
+rbx-css compile src/styles/game/*.css -o out/GameStyles.rbxmx
+```
+
+Attach different StyleSheets to different parts of your UI tree.
+
+### Minify in production
+
+Use `--minify` for production builds to reduce file size:
+
+```bash
+rbx-css compile styles.css -o StyleSheet.luau --minify
+```
+
+## Debugging
+
+### Enable all warnings
+
+See detailed warnings during development:
+
+```bash
+rbx-css compile styles.css -o output.luau --warn all
+```
+
+### Check output files
+
+Inspect the generated Luau to understand how CSS maps to Roblox:
+
+```bash
+rbx-css compile styles.css -o StyleSheet.luau
+cat StyleSheet.luau
+```
+
+### Use manifest for debugging
+
+Generate a manifest to see exactly what was compiled:
+
+```bash
+rbx-css compile styles.css -o StyleSheet.luau --manifest
+cat StyleSheet.manifest.json
+```
+
+## Best practices
+
+<CardGroup cols={2}>
+  <Card title="Use design tokens" icon="palette">
+    Centralize colors, spacing, and typography in `:root` variables for consistency.
+  </Card>
+  
+  <Card title="Organize by component" icon="folder">
+    Keep component styles in separate files that mirror your component structure.
+  </Card>
+  
+  <Card title="Watch in development" icon="eye">
+    Use watch mode during development for instant feedback on CSS changes.
+  </Card>
+  
+  <Card title="Strict in production" icon="shield-check">
+    Enable `--strict` mode in CI to catch issues before deployment.
+  </Card>
+</CardGroup>

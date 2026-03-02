@@ -1,0 +1,139 @@
+---
+title: rbx-css compile
+description: Compile CSS files to Roblox StyleSheet
+---
+
+Compile one or more CSS files into a Roblox StyleSheet. The output format (Luau or RBXMX) can be explicitly specified or automatically inferred from the output file extension.
+
+## Usage
+
+```bash
+rbx-css compile <files...> [options]
+```
+
+## Arguments
+
+<ParamField path="files" type="string[]" required>
+  One or more CSS input files to compile. Multiple files are merged into a single StyleSheet.
+</ParamField>
+
+## Options
+
+<ParamField path="-o, --output" type="string">
+  Output file path. The format is automatically inferred from the file extension (`.luau` or `.rbxmx`).
+  
+  **Default:** Outputs to stdout
+</ParamField>
+
+<ParamField path="--name" type="string" default="StyleSheet">
+  Name of the generated StyleSheet instance.
+</ParamField>
+
+<ParamField path="--format" type="string">
+  Explicitly set the output format. Valid values are `luau` or `rbxmx`.
+  
+  **Default:** Inferred from `--output` extension (defaults to `luau` if not specified)
+</ParamField>
+
+<ParamField path="--warn" type="string" default="all">
+  Warning level for unsupported CSS features. Valid values:
+  - `all` - Show all warnings
+  - `unsupported` - Show only unsupported feature warnings
+  - `none` - Suppress all warnings
+</ParamField>
+
+<ParamField path="--strict" type="boolean" default={false}>
+  Treat warnings as errors. Compilation will fail if any warnings are emitted.
+</ParamField>
+
+<ParamField path="--minify" type="boolean" default={false}>
+  Minify the generated Luau output. Only applies to Luau format.
+</ParamField>
+
+<ParamField path="--tokens-sheet" type="boolean" default={false}>
+  Emit design tokens (CSS custom properties from `:root`) as a separate StyleSheet.
+</ParamField>
+
+<ParamField path="--manifest" type="boolean" default={false}>
+  Generate a `.manifest.json` file alongside the output. The manifest contains metadata about the compiled stylesheet, such as which classes use `overflow: scroll`.
+  
+  <Note>Only works when `--output` is specified.</Note>
+</ParamField>
+
+## Examples
+
+### Compile to stdout
+
+```bash
+rbx-css compile styles.css
+```
+
+### Compile to Luau file
+
+```bash
+rbx-css compile styles.css -o StyleSheet.luau
+```
+
+### Compile to RBXMX model
+
+```bash
+rbx-css compile styles.css -o StyleSheet.rbxmx
+```
+
+### Merge multiple CSS files
+
+```bash
+rbx-css compile base.css theme.css components.css -o StyleSheet.luau
+```
+
+### Custom StyleSheet name
+
+```bash
+rbx-css compile styles.css -o CoreSheet.luau --name "CoreSheet"
+```
+
+### Strict mode with minification
+
+```bash
+rbx-css compile styles.css -o styles.luau --strict --minify
+```
+
+### Generate with manifest
+
+```bash
+rbx-css compile styles.css -o StyleSheet.luau --manifest
+```
+
+This creates both `StyleSheet.luau` and `StyleSheet.manifest.json`.
+
+## Output formats
+
+### Luau (recommended)
+
+Generates a `.luau` module that exports a factory function to create the StyleSheet at runtime:
+
+```lua
+local createStyleSheet = require(path.to.StyleSheet)
+local sheet = createStyleSheet()
+```
+
+### RBXMX
+
+Generates a `.rbxmx` model file that can be:
+- Imported directly into Roblox Studio
+- Synced via Rojo
+- Committed to version control
+
+<Warning>
+  RBXMX output is currently experimental. StyleRule properties are emitted as XML comments rather than fully encoded RBXMX properties. The Luau format is recommended for production use.
+</Warning>
+
+## Exit codes
+
+- `0` - Success
+- `1` - Compilation failed (syntax errors, or warnings in `--strict` mode)
+
+## Related
+
+- [rbx-css watch](/cli/watch) - Watch mode for automatic recompilation
+- [CLI flags reference](/cli/flags) - Complete flag documentation

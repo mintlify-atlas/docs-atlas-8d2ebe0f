@@ -1,0 +1,117 @@
+---
+title: rbx-css watch
+description: Watch CSS files and recompile on changes
+---
+
+Watch a directory or file for changes and automatically recompile whenever CSS files are modified. Ideal for development workflows.
+
+## Usage
+
+```bash
+rbx-css watch <path> [options]
+```
+
+## Arguments
+
+<ParamField path="path" type="string" required>
+  Directory or file to watch. If a directory is provided, all CSS files within it are monitored.
+</ParamField>
+
+## Options
+
+<ParamField path="-o, --output" type="string">
+  Output file path. The format is automatically inferred from the file extension (`.luau` or `.rbxmx`).
+  
+  **Default:** Outputs to stdout on each change
+</ParamField>
+
+<ParamField path="--name" type="string" default="StyleSheet">
+  Name of the generated StyleSheet instance.
+</ParamField>
+
+<ParamField path="--format" type="string">
+  Explicitly set the output format. Valid values are `luau` or `rbxmx`.
+  
+  **Default:** Inferred from `--output` extension (defaults to `luau` if not specified)
+</ParamField>
+
+<ParamField path="--warn" type="string" default="all">
+  Warning level for unsupported CSS features. Valid values:
+  - `all` - Show all warnings
+  - `unsupported` - Show only unsupported feature warnings
+  - `none` - Suppress all warnings
+</ParamField>
+
+<Note>
+  Watch mode does not support `--strict` mode. Warnings are always non-fatal to avoid disrupting your development workflow.
+</Note>
+
+## Examples
+
+### Watch a directory
+
+```bash
+rbx-css watch src/styles -o StyleSheet.luau
+```
+
+Monitors all CSS files in `src/styles/` and recompiles to `StyleSheet.luau` on any change.
+
+### Watch a single file
+
+```bash
+rbx-css watch styles.css -o out/StyleSheet.luau
+```
+
+### Watch with custom name
+
+```bash
+rbx-css watch src/styles -o CoreSheet.luau --name "CoreSheet"
+```
+
+### Watch and output to RBXMX
+
+```bash
+rbx-css watch src/styles -o styles.rbxmx
+```
+
+## Behavior
+
+- The watch process runs continuously until manually stopped (Ctrl+C)
+- Compilation errors are printed to stderr but do not stop the watch process
+- Each successful compilation prints: `Compiled -> <output-path>`
+- When watching a directory, all `.css` files are included
+
+## Integration with Rojo
+
+Watch mode pairs perfectly with Rojo's live sync:
+
+```bash
+# Terminal 1: Watch CSS files
+rbx-css watch src/styles -o out/StyleSheet.luau
+
+# Terminal 2: Run Rojo
+rojo serve
+```
+
+Changes to your CSS files will automatically:
+1. Trigger rbx-css to recompile the StyleSheet
+2. Trigger Rojo to sync the updated file to Studio
+
+## Example output
+
+```bash
+$ rbx-css watch src/styles -o StyleSheet.luau
+Compiled -> StyleSheet.luau
+# ... (watching for changes)
+Compiled -> StyleSheet.luau
+Compiled -> StyleSheet.luau
+```
+
+## Stopping the watcher
+
+Press `Ctrl+C` to stop the watch process.
+
+## Related
+
+- [rbx-css compile](/cli/compile) - One-time compilation
+- [CLI flags reference](/cli/flags) - Complete flag documentation

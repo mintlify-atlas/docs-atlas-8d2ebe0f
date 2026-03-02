@@ -1,0 +1,406 @@
+---
+title: Fonts
+description: How CSS font properties map to Roblox Font values
+---
+
+rbx-css maps CSS font properties to Roblox `Font` objects, combining font family, weight, and style into a single `FontFace` property.
+
+## Font family
+
+CSS font families map to Roblox font asset paths.
+
+### Built-in fonts
+
+```css input.css
+.text-gotham {
+  font-family: 'Gotham', sans-serif;
+}
+
+.text-roboto {
+  font-family: 'Roboto', sans-serif;
+}
+
+.text-mono {
+  font-family: monospace;
+}
+```
+
+```lua output.luau
+rule1:SetProperty("FontFace", Font.new(
+  "rbxasset://fonts/families/GothamSSm.json"
+))
+
+rule2:SetProperty("FontFace", Font.new(
+  "rbxasset://fonts/families/Roboto.json"
+))
+
+rule3:SetProperty("FontFace", Font.new(
+  "rbxasset://fonts/families/RobotoMono.json"
+))
+```
+
+### Font family mapping table
+
+| CSS `font-family` | Roblox Font Asset | Notes |
+|-------------------|-------------------|-------|
+| `gotham`, `gothamssm` | `GothamSSm` | Roblox default UI font |
+| `builder sans` | `BuilderSans` | Roblox's branded font |
+| `source sans pro` | `SourceSansPro` | Open-source alternative |
+| `roboto` | `Roboto` | Google's font |
+| `montserrat` | `Montserrat` | Popular web font |
+| `monospace` (generic) | `RobotoMono` | Monospace fallback |
+| `sans-serif` (generic) | `GothamSSm` | Sans-serif fallback |
+| `serif` (generic) | `Merriweather` | Serif fallback |
+
+### Custom fonts
+
+For fonts not in the mapping table, rbx-css assumes they exist in the Roblox fonts directory:
+
+```css input.css
+.text-custom {
+  font-family: 'MyCustomFont';
+}
+```
+
+```lua output.luau
+-- Assumes font exists at this path
+rule:SetProperty("FontFace", Font.new(
+  "rbxasset://fonts/families/MyCustomFont.json"
+))
+```
+
+<Warning>
+Unknown font families emit a warning. Make sure the font exists in your Roblox project or use one of the built-in fonts.
+</Warning>
+
+## Font weight
+
+CSS font weights map to Roblox `Enum.FontWeight` values.
+
+### Numeric weights
+
+```css input.css
+.thin {
+  font-weight: 100;
+}
+
+.regular {
+  font-weight: 400;
+}
+
+.bold {
+  font-weight: 700;
+}
+
+.black {
+  font-weight: 900;
+}
+```
+
+```lua output.luau
+rule1:SetProperty("FontFace", Font.new(
+  "rbxasset://fonts/families/GothamSSm.json",
+  Enum.FontWeight.Thin
+))
+
+rule2:SetProperty("FontFace", Font.new(
+  "rbxasset://fonts/families/GothamSSm.json",
+  Enum.FontWeight.Regular
+))
+
+rule3:SetProperty("FontFace", Font.new(
+  "rbxasset://fonts/families/GothamSSm.json",
+  Enum.FontWeight.Bold
+))
+
+rule4:SetProperty("FontFace", Font.new(
+  "rbxasset://fonts/families/GothamSSm.json",
+  Enum.FontWeight.Heavy
+))
+```
+
+### Named weights
+
+```css input.css
+.text {
+  font-weight: normal;
+  font-weight: bold;
+  font-weight: lighter;
+}
+```
+
+```lua output.luau
+-- 'normal' maps to Regular
+rule:SetProperty("FontFace", Font.new(family, Enum.FontWeight.Regular))
+
+-- 'bold' maps to Bold
+rule:SetProperty("FontFace", Font.new(family, Enum.FontWeight.Bold))
+
+-- 'lighter' / 'bolder' treated as Regular
+rule:SetProperty("FontFace", Font.new(family, Enum.FontWeight.Regular))
+```
+
+### Weight mapping table
+
+| CSS `font-weight` | Roblox `Enum.FontWeight` |
+|-------------------|---------------------------|
+| `100`, `thin` | `Thin` |
+| `200`, `extra-light` | `ExtraLight` |
+| `300`, `light` | `Light` |
+| `400`, `normal` | `Regular` |
+| `500`, `medium` | `Medium` |
+| `600`, `semi-bold` | `SemiBold` |
+| `700`, `bold` | `Bold` |
+| `800`, `extra-bold` | `ExtraBold` |
+| `900`, `black` | `Heavy` |
+
+## Font style
+
+CSS font styles map to Roblox `Enum.FontStyle` values.
+
+```css input.css
+.normal {
+  font-style: normal;
+}
+
+.italic {
+  font-style: italic;
+}
+```
+
+```lua output.luau
+rule1:SetProperty("FontFace", Font.new(
+  "rbxasset://fonts/families/GothamSSm.json",
+  Enum.FontWeight.Regular,
+  Enum.FontStyle.Normal
+))
+
+rule2:SetProperty("FontFace", Font.new(
+  "rbxasset://fonts/families/GothamSSm.json",
+  Enum.FontWeight.Regular,
+  Enum.FontStyle.Italic
+))
+```
+
+| CSS `font-style` | Roblox `Enum.FontStyle` |
+|------------------|-------------------------|
+| `normal` | `Normal` |
+| `italic` | `Italic` |
+| `oblique` | `Italic` (approximated) |
+
+## Combined font properties
+
+Font family, weight, and style are combined into a single `FontFace` property:
+
+```css input.css
+.heading {
+  font-family: 'Gotham', sans-serif;
+  font-weight: 700;
+  font-style: italic;
+}
+```
+
+```lua output.luau
+rule:SetProperty("FontFace", Font.new(
+  "rbxasset://fonts/families/GothamSSm.json",
+  Enum.FontWeight.Bold,
+  Enum.FontStyle.Italic
+))
+```
+
+### Shorthand font property
+
+The CSS `font` shorthand is supported (parsed by lightningcss):
+
+```css input.css
+.text {
+  font: italic 700 16px 'Gotham', sans-serif;
+}
+```
+
+```lua output.luau
+-- Equivalent to:
+rule:SetProperty("FontFace", Font.new(
+  "rbxasset://fonts/families/GothamSSm.json",
+  Enum.FontWeight.Bold,
+  Enum.FontStyle.Italic
+))
+rule:SetProperty("TextSize", 16)
+```
+
+## Font size
+
+Font size is a separate property from `FontFace`. See [Properties - Font size](/mapping/properties#font-size).
+
+```css input.css
+.text {
+  font-family: 'Gotham';
+  font-size: 18px;
+}
+```
+
+```lua output.luau
+rule:SetProperty("FontFace", Font.new(
+  "rbxasset://fonts/families/GothamSSm.json"
+))
+rule:SetProperty("TextSize", 18)
+```
+
+## Font fallbacks
+
+CSS font stacks (comma-separated lists) are evaluated left-to-right. rbx-css uses the first recognized font:
+
+```css input.css
+.text {
+  font-family: 'CustomFont', 'Gotham', sans-serif;
+}
+```
+
+```lua output.luau
+-- If 'CustomFont' is unknown, falls back to 'Gotham'
+rule:SetProperty("FontFace", Font.new(
+  "rbxasset://fonts/families/GothamSSm.json"
+))
+-- Or if CustomFont is valid:
+rule:SetProperty("FontFace", Font.new(
+  "rbxasset://fonts/families/CustomFont.json"
+))
+```
+
+<Warning>
+rbx-css picks the **first** font it recognizes in the stack. It doesn't generate fallback logic at runtime like browsers do.
+</Warning>
+
+## CSS variables for fonts
+
+Font family tokens can be defined with CSS custom properties:
+
+```css input.css
+:root {
+  --font-heading: 'Gotham';
+  --font-body: 'Roboto';
+}
+
+.heading {
+  font-family: var(--font-heading);
+  font-weight: 700;
+}
+
+.body {
+  font-family: var(--font-body);
+}
+```
+
+```lua output.luau
+-- Token attributes
+sheet:SetAttribute("font-heading", Font.new(
+  "rbxasset://fonts/families/GothamSSm.json"
+))
+sheet:SetAttribute("font-body", Font.new(
+  "rbxasset://fonts/families/Roboto.json"
+))
+
+-- Rules using tokens
+rule1:SetProperty("FontFace", "$font-heading")
+-- Note: weight is applied separately if specified in the rule
+
+rule2:SetProperty("FontFace", "$font-body")
+```
+
+## Unsupported font features
+
+| CSS Property | Reason |
+|--------------|--------|
+| `font-variant` | No small-caps or variant support |
+| `font-stretch` | No condensed/expanded support |
+| `font-kerning` | No kerning control |
+| `font-feature-settings` | No OpenType feature access |
+| `@font-face` | Use Roblox font assets instead |
+
+## Font asset structure
+
+Roblox font assets are JSON files defining font metadata:
+
+```lua
+-- rbxasset://fonts/families/GothamSSm.json structure:
+{
+  name = "Gotham SSm",
+  faces = {
+    { name = "Regular", weight = 400, style = "normal", ... },
+    { name = "Bold", weight = 700, style = "normal", ... },
+    { name = "Italic", weight = 400, style = "italic", ... },
+    ...
+  }
+}
+```
+
+The `Font.new()` constructor selects the appropriate face based on weight and style.
+
+## Complete example
+
+```css input.css
+:root {
+  --font-display: 'Gotham';
+}
+
+.heading {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 32px;
+  font-style: normal;
+}
+
+.subheading {
+  font-family: 'Source Sans Pro', sans-serif;
+  font-weight: 600;
+  font-size: 24px;
+}
+
+.body {
+  font-family: 'Roboto', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.code {
+  font-family: monospace;
+  font-size: 14px;
+}
+```
+
+```lua output.luau
+-- Token
+sheet:SetAttribute("font-display", Font.new(
+  "rbxasset://fonts/families/GothamSSm.json"
+))
+
+-- .heading
+rule1:SetProperty("FontFace", Font.new(
+  "rbxasset://fonts/families/GothamSSm.json",
+  Enum.FontWeight.ExtraBold,
+  Enum.FontStyle.Normal
+))
+rule1:SetProperty("TextSize", 32)
+
+-- .subheading
+rule2:SetProperty("FontFace", Font.new(
+  "rbxasset://fonts/families/SourceSansPro.json",
+  Enum.FontWeight.SemiBold
+))
+rule2:SetProperty("TextSize", 24)
+
+-- .body
+rule3:SetProperty("FontFace", Font.new(
+  "rbxasset://fonts/families/Roboto.json",
+  Enum.FontWeight.Regular
+))
+rule3:SetProperty("TextSize", 16)
+rule3:SetProperty("LineHeight", 1.5)
+
+-- .code
+rule4:SetProperty("FontFace", Font.new(
+  "rbxasset://fonts/families/RobotoMono.json"
+))
+rule4:SetProperty("TextSize", 14)
+```

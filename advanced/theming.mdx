@@ -1,0 +1,278 @@
+---
+title: Theming
+description: Build multi-theme stylesheets with data attributes or media queries
+---
+
+rbx-css supports theming by allowing you to define theme-specific token overrides that compile into separate StyleSheet instances connected via `StyleDerive`.
+
+## Theme definition
+
+Themes are defined by overriding CSS custom properties in theme-specific selectors. rbx-css supports two approaches:
+
+<Tabs>
+  <Tab title="data-theme attribute">
+    Use `[data-theme="name"]` attribute selectors to define themes:
+
+    ```css
+    :root {
+      --bg: white;
+      --text: #1a1a2e;
+      --primary: #335fff;
+    }
+
+    [data-theme="dark"] {
+      --bg: #1a1a2e;
+      --text: #e1e1e1;
+      --primary: #4470ff;
+    }
+
+    [data-theme="ocean"] {
+      --bg: #0f172a;
+      --text: #e0f2fe;
+      --primary: #0ea5e9;
+    }
+    ```
+
+    Theme names come from the `data-theme` attribute value.
+  </Tab>
+  
+  <Tab title="prefers-color-scheme">
+    Use `@media (prefers-color-scheme)` to define light/dark themes:
+
+    ```css
+    :root {
+      --bg: white;
+      --text: #1a1a2e;
+      --primary: #335fff;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1a1a2e;
+        --text: #e1e1e1;
+        --primary: #4470ff;
+      }
+    }
+    ```
+
+    The theme is automatically named `"dark"` or `"light"` based on the media query.
+  </Tab>
+</Tabs>
+
+## How themes work
+
+Themes compile into separate StyleSheet instances that override specific tokens:
+
+1. **Base StyleSheet** contains all your style rules and default token values
+2. **Theme StyleSheets** contain only the overridden token values
+3. **StyleDerive** connects the base sheet to the active theme sheet
+
+When you switch themes at runtime, you change which theme StyleSheet is connected to the base via `StyleDerive`.
+
+## Generated output
+
+For the CSS above, rbx-css generates:
+
+```lua
+local function createStyleSheet()
+  -- Base stylesheet with default tokens
+  local sheet = Instance.new("StyleSheet")
+  sheet.Name = "StyleSheet"
+  sheet:SetAttribute("bg", Color3.fromHex("#ffffff"))
+  sheet:SetAttribute("text", Color3.fromHex("#1a1a2e"))
+  sheet:SetAttribute("primary", Color3.fromHex("#335fff"))
+  
+  -- All your style rules...
+  -- (rules reference tokens like "$bg", "$text", etc.)
+  
+  -- Dark theme stylesheet
+  local darkTheme = Instance.new("StyleSheet")
+  darkTheme.Name = "dark"
+  darkTheme:SetAttribute("bg", Color3.fromHex("#1a1a2e"))
+  darkTheme:SetAttribute("text", Color3.fromHex("#e1e1e1"))
+  darkTheme:SetAttribute("primary", Color3.fromHex("#4470ff"))
+  
+  -- Ocean theme stylesheet
+  local oceanTheme = Instance.new("StyleSheet")
+  oceanTheme.Name = "ocean"
+  oceanTheme:SetAttribute("bg", Color3.fromHex("#0f172a"))
+  oceanTheme:SetAttribute("text", Color3.fromHex("#e0f2fe"))
+  oceanTheme:SetAttribute("primary", Color3.fromHex("#0ea5e9"))
+  
+  -- StyleDerive connects base to active theme
+  local themeDerive = Instance.new("StyleDerive")
+  themeDerive.Parent = sheet
+  themeDerive.StyleSheet = darkTheme -- default theme
+  
+  -- Theme collection for switching
+  local themes = {
+    dark = darkTheme,
+    ocean = oceanTheme,
+  }
+  
+  -- Helper function for theme switching
+  local function setTheme(themeName: string)
+    local theme = themes[themeName]
+    if theme then
+      themeDerive.StyleSheet = theme
+    end
+  end
+  
+  return sheet, setTheme, themes
+end
+
+return createStyleSheet
+```
+
+## Runtime theme switching
+
+Use the generated `setTheme()` function to switch themes:
+
+```lua
+local createStyleSheet = require(ReplicatedStorage.StyleSheet)
+local sheet, setTheme, themes = createStyleSheet()
+
+-- Apply the stylesheet to the UI root
+local screenGui = script.Parent
+screenGui.StyleSheet = sheet
+
+-- Switch to dark theme
+setTheme("dark")
+
+-- Switch to ocean theme
+setTheme("ocean")
+
+-- You can also directly access theme sheets
+for name, themeSheet in themes do
+  print("Available theme:", name)
+end
+```
+
+## Partial token overrides
+
+Themes only need to override tokens that change. Tokens not specified in a theme selector inherit from the base `:root`:
+
+```css
+:root {
+  --bg: white;
+  --text: black;
+  --primary: #335fff;
+  --secondary: #ff0099;
+  --radius: 8px;       /* Not overridden in themes */
+  --font: "GothamSSm"; /* Not overridden in themes */
+}
+
+[data-theme="dark"] {
+  --bg: #1a1a2e;       /* Only override colors */
+  --text: #e1e1e1;
+  --primary: #4470ff;
+  --secondary: #ff4db8;
+  /* --radius and --font remain 8px and "GothamSSm" */
+}
+```
+
+The dark theme StyleSheet only contains attributes for the four color tokens. When applied via `StyleDerive`, it overrides only those values while leaving other tokens unchanged.
+
+## Multiple themes
+
+You can define as many themes as needed:
+
+```css
+:root {
+  --bg: white;
+  --text: black;
+  --accent: blue;
+}
+
+[data-theme="dark"] {
+  --bg: #1a1a2e;
+  --text: white;
+  --accent: #4470ff;
+}
+
+[data-theme="high-contrast"] {
+  --bg: black;
+  --text: white;
+  --accent: yellow;
+}
+
+[data-theme="solarized"] {
+  --bg: #fdf6e3;
+  --text: #657b83;
+  --accent: #268bd2;
+}
+```
+
+All themes are available in the `themes` table returned by `createStyleSheet()`.
+
+## Theme-specific rules
+
+<Warning>
+Themes only support overriding `:root` tokens. Theme-specific style rules (e.g., `[data-theme="dark"] .card { ... }`) are not currently supported.
+</Warning>
+
+To apply theme-specific styling, override tokens and reference them in your base styles:
+
+```css
+/* ✓ Supported - override tokens */
+:root {
+  --card-bg: white;
+}
+
+[data-theme="dark"] {
+  --card-bg: #1a1a2e;
+}
+
+.card {
+  background-color: var(--card-bg);
+}
+
+/* ✗ Not supported - theme-specific rules */
+[data-theme="dark"] .card {
+  background-color: #1a1a2e;
+}
+```
+
+## Combining with prefers-color-scheme
+
+You can use both `data-theme` attributes and `@media` queries together:
+
+```css
+/* Default light theme */
+:root {
+  --bg: white;
+  --text: black;
+}
+
+/* System preference dark mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1a2e;
+    --text: white;
+  }
+}
+
+/* Custom color themes */
+[data-theme="ocean"] {
+  --bg: #0f172a;
+  --text: #e0f2fe;
+}
+
+[data-theme="forest"] {
+  --bg: #14532d;
+  --text: #dcfce7;
+}
+```
+
+Both `dark` (from media query) and custom themes are available via `setTheme()`.
+
+## Implementation details
+
+Theme extraction is handled in `src/ir/themes.ts`:
+
+1. **Data theme extraction** - The parser identifies `[data-theme="..."]` attribute selectors and extracts the theme name from the selector
+2. **Media query extraction** - The parser walks media query structures to find `prefers-color-scheme` features and uses the scheme value (`dark` or `light`) as the theme name
+3. **Custom property extraction** - For each theme selector, custom properties are extracted and converted to token values
+4. **Theme map** - All themes are stored as `Map<string, Map<string, TokenValue>>` in the IR
+
+The Luau codegen creates separate StyleSheet instances for each theme and wires them together with `StyleDerive`.

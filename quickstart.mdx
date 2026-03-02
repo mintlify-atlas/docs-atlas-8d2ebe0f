@@ -1,80 +1,366 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick start
+description: Create your first Roblox StyleSheet from CSS in under 5 minutes with rbx-css.
 ---
 
-## Get started in three steps
+## Create your first StyleSheet
 
-Get your documentation site running locally and make your first customization.
+This guide will walk you through creating a styled card component using rbx-css.
 
-### Step 1: Set up your local environment
+<Steps>
+  <Step title="Create a CSS file">
+    Create a new file called `styles.css` with some basic styles:
+
+    ```css styles.css
+    :root {
+      --bg: #1a1a2e;
+      --text: #e1e1e1;
+      --primary: #335fff;
+      --radius: 8px;
+      --gap: 12px;
+    }
+
+    .card {
+      background-color: var(--bg);
+      border-radius: var(--radius);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: var(--gap);
+    }
+
+    .card:hover {
+      background-color: #2a2a4e;
+    }
+
+    .card > span {
+      color: var(--text);
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    button.primary {
+      background-color: var(--primary);
+      color: white;
+      font-size: 16px;
+      border-radius: 6px;
+      padding: 8px 24px;
+    }
+
+    button.primary:hover {
+      background-color: #4470ff;
+    }
+    ```
+
+    <Note>
+      CSS variables on `:root` become StyleSheet attributes that you can reference throughout your styles.
+    </Note>
+  </Step>
+
+  <Step title="Compile to Luau">
+    Run the rbx-css compiler to generate a Luau module:
+
+    <CodeGroup>
+    ```bash npm
+    npx rbx-css compile styles.css -o StyleSheet.luau
+    ```
+
+    ```bash bun
+    bun rbx-css compile styles.css -o StyleSheet.luau
+    ```
+
+    ```bash yarn
+    yarn rbx-css compile styles.css -o StyleSheet.luau
+    ```
+    </CodeGroup>
+
+    You should see:
+    ```
+    Written to StyleSheet.luau
+    ```
+
+    <Tip>
+      The output format (`.luau` or `.rbxmx`) is automatically inferred from the file extension.
+    </Tip>
+  </Step>
+
+  <Step title="Use in Roblox">
+    Import and use the generated StyleSheet in your Roblox project:
+
+    ```lua
+    local StyleSheet = require(script.Parent.StyleSheet)
+    local sheet = StyleSheet.createStyleSheet()
+
+    -- Create a card Frame
+    local card = Instance.new("Frame")
+    card.Name = "Card"
+    card:SetAttribute("class", "card")
+
+    -- Apply the stylesheet
+    sheet:Apply(card)
+    ```
+
+    The `card` Frame will now have:
+    - Dark background color from `--bg`
+    - 8px border radius via `UICorner`
+    - 1px white stroke via `UIStroke`
+    - 16px padding via `UIPadding`
+    - Vertical flex layout via `UIListLayout`
+    - 12px gap between children
+    - Hover state that changes background color
+  </Step>
+</Steps>
+
+## Understanding the output
+
+Let's break down what rbx-css generated:
+
+### Design tokens
+
+CSS variables become StyleSheet attributes:
+
+```css
+:root {
+  --primary: #335fff;  /* → Color3 attribute */
+  --radius: 8px;       /* → UDim attribute */
+  --gap: 12px;         /* → UDim attribute */
+}
+```
+
+These are automatically typed based on their values:
+- Colors → `Color3.fromRGB()`
+- Lengths with units → `UDim.new()`
+- Plain numbers → `number`
+- Strings → `string`
+
+### Class selectors
+
+CSS class selectors map directly to Roblox class attributes:
+
+```css
+.card { /* styles */ }
+```
+
+Matches any instance with `class = "card"` attribute.
+
+### Pseudo-instances
+
+CSS properties that require Roblox child instances are automatically created:
+
+```css
+.card {
+  border-radius: 8px;        /* Creates UICorner */
+  border: 1px solid white;   /* Creates UIStroke */
+  padding: 16px;             /* Creates UIPadding */
+  display: flex;             /* Creates UIListLayout */
+}
+```
+
+### State selectors
+
+Pseudo-classes map to Roblox GuiState:
+
+```css
+.card:hover {
+  background-color: #2a2a4e;  /* Hover state */
+}
+
+button:active {
+  background-color: #111;     /* Press state */
+}
+```
+
+## Common patterns
 
 <AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
+  <Accordion title="Responsive sizing">
+    Use percentage units for responsive layouts:
+
+    ```css
+    .container {
+      width: 100%;           /* UDim.new(1, 0) */
+      height: 50%;           /* UDim.new(0.5, 0) */
+      padding: 24px;         /* UDim.new(0, 24) */
+    }
+    ```
   </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
+
+  <Accordion title="Flexbox layouts">
+    Use familiar flexbox properties:
+
+    ```css
+    .row {
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .column {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Typography">
+    Style text with standard CSS properties:
+
+    ```css
+    .heading {
+      font-size: 24px;
+      font-weight: 700;
+      font-family: "GothamSSm";
+      color: white;
+      text-align: center;
+    }
+
+    .body {
+      font-size: 16px;
+      line-height: 1.5;
+      color: #e1e1e1;
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Theme switching">
+    Implement dark mode with data attributes:
+
+    ```css
+    :root {
+      --bg: #ffffff;
+      --text: #1a1a2e;
+    }
+
+    [data-theme="dark"] {
+      --bg: #1a1a2e;
+      --text: #ffffff;
+    }
+
+    .card {
+      background-color: var(--bg);
+      color: var(--text);
+    }
+    ```
+
+    Then use the generated `setTheme()` function:
+
+    ```lua
+    sheet:setTheme("dark")
+    ```
   </Accordion>
 </AccordionGroup>
 
-### Step 2: Deploy your changes
+## Multiple input files
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+Compile multiple CSS files into a single StyleSheet:
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+```bash
+rbx-css compile base.css theme.css components.css -o StyleSheet.luau
+```
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+All files are merged in order, allowing you to:
+- Define tokens in `base.css`
+- Override for themes in `theme.css`
+- Add component styles in `components.css`
 
-### Step 3: Go live
+<Tip>
+  Files are processed in order, so later files can override earlier ones following standard CSS cascade rules.
+</Tip>
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+## Watch mode for development
+
+Use watch mode to automatically recompile on file changes:
+
+```bash
+rbx-css watch src/styles -o StyleSheet.luau
+```
+
+This watches all CSS files in `src/styles/` and recompiles whenever you save changes.
+
+<Note>
+  Watch mode is perfect for development workflows where you're frequently iterating on styles.
+</Note>
+
+## CLI options
+
+Customize compilation with these options:
+
+```bash
+rbx-css compile styles.css \
+  -o StyleSheet.luau \
+  --name MyStyleSheet \
+  --minify \
+  --strict \
+  --manifest
+```
+
+- `--name` - Custom StyleSheet instance name (default: `StyleSheet`)
+- `--minify` - Minify the generated Luau output
+- `--strict` - Treat warnings as errors
+- `--warn` - Warning level: `all`, `unsupported`, or `none`
+- `--manifest` - Generate a `.manifest.json` file with metadata
+
+## Programmatic usage
+
+You can also use rbx-css as a library in your build tools:
+
+```typescript
+import { compile, generateLuau } from "rbx-css";
+
+const result = compile(
+  [{ filename: "styles.css", content: cssContent }],
+  { 
+    name: "MyStyleSheet",
+    warnLevel: "all",
+    strict: false 
+  }
+);
+
+// Check for warnings
+if (result.warnings.hasErrors()) {
+  console.error(result.warnings.format());
+  process.exit(1);
+}
+
+// Generate Luau output
+const luau = generateLuau(result.ir, { minify: false });
+```
+
+This is useful for integrating rbx-css into custom build pipelines or bundlers.
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
-
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card
+    title="CSS mapping reference"
+    icon="map"
+    href="/css-mapping"
+  >
+    Learn how CSS properties map to Roblox
+  </Card>
+  <Card
+    title="CLI reference"
+    icon="terminal"
+    href="/cli-reference"
+  >
+    Explore all CLI commands and options
+  </Card>
+  <Card
+    title="Supported properties"
+    icon="list"
+    href="/supported-properties"
+  >
+    See all supported CSS properties
+  </Card>
+  <Card
+    title="Examples"
+    icon="code"
+    href="/examples"
+  >
+    View real-world examples and patterns
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

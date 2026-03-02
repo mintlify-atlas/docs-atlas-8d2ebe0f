@@ -1,0 +1,208 @@
+---
+title: CLI flags
+description: Complete reference for all rbx-css command-line flags
+---
+
+This page documents all command-line flags available in rbx-css. Flags are shared between `compile` and `watch` commands unless otherwise noted.
+
+## Output flags
+
+<ParamField path="-o, --output" type="string">
+  Output file path for the compiled StyleSheet.
+  
+  **Format inference:**
+  - `.luau` extension → Luau format
+  - `.rbxmx` extension → RBXMX format
+  - No extension → Luau format
+  
+  **Default:** stdout (prints to console)
+  
+  **Available in:** `compile`, `watch`
+  
+  ```bash
+  rbx-css compile styles.css -o StyleSheet.luau
+  rbx-css compile styles.css -o StyleSheet.rbxmx
+  ```
+</ParamField>
+
+<ParamField path="--format" type="string">
+  Explicitly set the output format, overriding automatic inference.
+  
+  **Valid values:**
+  - `luau` - Generate Luau module (recommended)
+  - `rbxmx` - Generate RBXMX model file (experimental)
+  
+  **Default:** Inferred from `--output` file extension
+  
+  **Available in:** `compile`, `watch`
+  
+  ```bash
+  rbx-css compile styles.css --format luau
+  ```
+</ParamField>
+
+<ParamField path="--name" type="string" default="StyleSheet">
+  Name assigned to the root StyleSheet instance.
+  
+  **Available in:** `compile`, `watch`
+  
+  ```bash
+  rbx-css compile styles.css -o core.luau --name "CoreSheet"
+  ```
+</ParamField>
+
+## Warning flags
+
+<ParamField path="--warn" type="string" default="all">
+  Control the level of warnings emitted during compilation.
+  
+  **Valid values:**
+  - `all` - Show all warnings (unsupported properties, selectors, units, etc.)
+  - `unsupported` - Show only warnings about unsupported CSS features
+  - `none` - Suppress all warnings
+  
+  **Available in:** `compile`, `watch`
+  
+  ```bash
+  # Show all warnings
+  rbx-css compile styles.css --warn all
+  
+  # Suppress warnings
+  rbx-css compile styles.css --warn none
+  ```
+</ParamField>
+
+<ParamField path="--strict" type="boolean" default={false}>
+  Treat warnings as errors. Compilation will fail (exit code 1) if any warnings are emitted.
+  
+  Useful for CI/CD pipelines where you want to enforce zero warnings.
+  
+  **Available in:** `compile` only
+  
+  <Note>
+    Not available in `watch` mode to avoid disrupting development workflow.
+  </Note>
+  
+  ```bash
+  rbx-css compile styles.css -o out.luau --strict
+  ```
+</ParamField>
+
+## Output optimization
+
+<ParamField path="--minify" type="boolean" default={false}>
+  Minify the generated Luau output by removing whitespace and comments.
+  
+  **Only applies to:** Luau format (has no effect on RBXMX output)
+  
+  **Available in:** `compile` only
+  
+  ```bash
+  rbx-css compile styles.css -o StyleSheet.luau --minify
+  ```
+</ParamField>
+
+## Token flags
+
+<ParamField path="--tokens-sheet" type="boolean" default={false}>
+  Emit CSS custom properties (design tokens from `:root`) as a separate StyleSheet instance instead of embedding them in the main StyleSheet.
+  
+  **Available in:** `compile` only
+  
+  ```bash
+  rbx-css compile styles.css -o out.luau --tokens-sheet
+  ```
+  
+  <Note>
+    This is useful when you want to share design tokens across multiple StyleSheets or manage them independently.
+  </Note>
+</ParamField>
+
+## Metadata flags
+
+<ParamField path="--manifest" type="boolean" default={false}>
+  Generate a `.manifest.json` file alongside the output containing metadata about the compiled stylesheet.
+  
+  **Manifest contents:**
+  - Classes that use `overflow: scroll` (helps tools like rbx-tsx upgrade `Frame` to `ScrollingFrame`)
+  - Other compilation metadata
+  
+  **Requires:** `--output` must be specified (doesn't work with stdout)
+  
+  **Available in:** `compile` only
+  
+  **Example:**
+  
+  ```bash
+  rbx-css compile styles.css -o StyleSheet.luau --manifest
+  ```
+  
+  Produces:
+  - `StyleSheet.luau`
+  - `StyleSheet.manifest.json`
+</ParamField>
+
+## Global flags
+
+<ParamField path="--version" type="boolean">
+  Display the rbx-css version number and exit.
+  
+  ```bash
+  rbx-css --version
+  # Output: 0.1.0
+  ```
+</ParamField>
+
+<ParamField path="--help" type="boolean">
+  Display help information for a command.
+  
+  ```bash
+  rbx-css --help
+  rbx-css compile --help
+  rbx-css watch --help
+  ```
+</ParamField>
+
+## Flag compatibility matrix
+
+| Flag | compile | watch |
+|------|---------|-------|
+| `-o, --output` | ✓ | ✓ |
+| `--name` | ✓ | ✓ |
+| `--format` | ✓ | ✓ |
+| `--warn` | ✓ | ✓ |
+| `--strict` | ✓ | ✗ |
+| `--minify` | ✓ | ✗ |
+| `--tokens-sheet` | ✓ | ✗ |
+| `--manifest` | ✓ | ✗ |
+
+## Examples
+
+### Minimal compile
+
+```bash
+rbx-css compile styles.css
+```
+
+### Production build
+
+```bash
+rbx-css compile styles.css -o dist/StyleSheet.luau --strict --minify --manifest
+```
+
+### Development with watch
+
+```bash
+rbx-css watch src/styles -o StyleSheet.luau --warn none
+```
+
+### Multiple input files with custom name
+
+```bash
+rbx-css compile base.css theme.css components.css -o CoreSheet.luau --name "CoreSheet"
+```
+
+## Related
+
+- [rbx-css compile](/cli/compile) - Compile command documentation
+- [rbx-css watch](/cli/watch) - Watch command documentation

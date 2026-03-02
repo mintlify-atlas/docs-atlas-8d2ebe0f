@@ -1,0 +1,155 @@
+---
+title: Installation
+description: Install rbx-css using npm, yarn, bun, or pnpm and start compiling CSS to Roblox StyleSheets.
+---
+
+## Package managers
+
+Install rbx-css using your preferred package manager:
+
+<CodeGroup>
+
+```bash npm
+npm install rbx-css
+```
+
+```bash yarn
+yarn add rbx-css
+```
+
+```bash bun
+bun add rbx-css
+```
+
+```bash pnpm
+pnpm add rbx-css
+```
+
+</CodeGroup>
+
+This installs the `rbx-css` CLI globally in your project, making it available for compilation commands.
+
+## Verify installation
+
+After installation, verify that rbx-css is working correctly:
+
+<CodeGroup>
+
+```bash npm
+npx rbx-css --version
+```
+
+```bash yarn
+yarn rbx-css --version
+```
+
+```bash bun
+bun rbx-css --version
+```
+
+```bash pnpm
+pnpm rbx-css --version
+```
+
+</CodeGroup>
+
+You should see the version number (e.g., `0.1.0`).
+
+## Requirements
+
+<Note>
+  rbx-css requires Node.js 16 or higher, or Bun 1.0 or higher.
+</Note>
+
+The package has minimal dependencies:
+- `commander` - CLI framework
+- `lightningcss` - Fast CSS parser and transformer
+
+## Development setup
+
+If you're developing rbx-css itself or want to run it from source:
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/your-org/rbx-css.git
+    cd rbx-css
+    ```
+  </Step>
+  
+  <Step title="Install dependencies">
+    ```bash
+    bun install
+    ```
+  </Step>
+  
+  <Step title="Build the project">
+    ```bash
+    bun run build
+    ```
+  </Step>
+  
+  <Step title="Run from source">
+    ```bash
+    bun run dev compile styles.css
+    ```
+  </Step>
+</Steps>
+
+## Project structure
+
+After installation, you'll typically organize your project like this:
+
+```
+your-project/
+├── src/
+│   ├── styles/
+│   │   ├── base.css
+│   │   ├── components.css
+│   │   └── theme.css
+│   └── ...
+├── out/
+│   └── StyleSheet.luau
+├── package.json
+└── ...
+```
+
+<Tip>
+  Keep your CSS files organized in a dedicated `styles/` directory for easier management.
+</Tip>
+
+## Editor setup
+
+### VS Code
+
+For the best development experience in VS Code:
+
+1. Install the **CSS Language Features** extension (built-in)
+2. Enable CSS IntelliSense for autocomplete and validation
+3. Optionally install **Lightning CSS** for enhanced CSS support
+
+### Other editors
+
+rbx-css uses standard CSS syntax, so any editor with CSS support will work:
+- Sublime Text: Built-in CSS support
+- Neovim: Use `css-lsp` or `tailwindcss-intellisense`
+- WebStorm: Built-in CSS support
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Quick start guide"
+    icon="bolt"
+    href="/quickstart"
+  >
+    Create your first StyleSheet in minutes
+  </Card>
+  <Card
+    title="CLI reference"
+    icon="terminal"
+    href="/cli-reference"
+  >
+    Learn all CLI commands and options
+  </Card>
+</CardGroup>

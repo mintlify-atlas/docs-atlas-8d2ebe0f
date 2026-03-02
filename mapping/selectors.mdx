@@ -1,0 +1,257 @@
+---
+title: Selectors
+description: How CSS selectors map to Roblox StyleSheet selectors
+---
+
+rbx-css translates standard CSS selectors into Roblox StyleSheet selectors, automatically handling HTML element names, pseudo-classes, and special characters.
+
+## Element selectors
+
+HTML element selectors are automatically mapped to their Roblox GuiObject equivalents.
+
+### HTML to Roblox class mapping
+
+| CSS Selector | Roblox Selector | Notes |
+|--------------|-----------------|-------|
+| `div` | `Frame` | Generic container |
+| `span`, `p`, `h1`-`h6`, `label` | `TextLabel` | Text display elements |
+| `button`, `a` | `TextButton` | Interactive buttons |
+| `input`, `textarea` | `TextBox` | Text input fields |
+| `img` | `ImageLabel` | Image display |
+| `canvas` | `ViewportFrame` | 3D viewport |
+| `video` | `VideoFrame` | Video playback |
+| `scroll` | `ScrollingFrame` | Scrollable container |
+
+```css input.css
+/* CSS input */
+div {
+  background-color: white;
+}
+
+button {
+  padding: 8px 16px;
+}
+```
+
+```lua output.luau
+-- Generated Luau
+local rule1 = Instance.new("StyleRule")
+rule1.Selector = "Frame"
+rule1:SetProperty("BackgroundColor3", Color3.fromRGB(255, 255, 255))
+
+local rule2 = Instance.new("StyleRule")
+rule2.Selector = "TextButton"
+```
+
+### Semantic elements
+
+Semantic HTML elements all map to `Frame`:
+
+| CSS Selector | Roblox Selector |
+|--------------|-----------------|
+| `nav`, `header`, `footer`, `main`, `section`, `article`, `aside` | `Frame` |
+| `form`, `ul`, `ol`, `li` | `Frame` |
+| `table`, `thead`, `tbody`, `tfoot`, `tr`, `dialog` | `Frame` |
+
+## Direct Roblox class selectors
+
+You can use Roblox GuiObject class names directly. These pass through unchanged:
+
+```css input.css
+/* CSS input */
+Frame {
+  background-color: transparent;
+}
+
+ScrollingFrame {
+  scroll-bar-thickness: 8px;
+}
+
+TextLabel {
+  text-color: white;
+}
+```
+
+```lua output.luau
+-- Generated Luau (selectors unchanged)
+rule.Selector = "Frame"
+rule.Selector = "ScrollingFrame"
+rule.Selector = "TextLabel"
+```
+
+## Class selectors
+
+CSS class selectors map directly to Roblox CollectionService tags:
+
+```css input.css
+.card {
+  background-color: white;
+  border-radius: 8px;
+}
+
+.button-primary {
+  background-color: blue;
+}
+```
+
+```lua output.luau
+rule.Selector = ".card"
+rule.Selector = ".button-primary"
+```
+
+### Special character escaping
+
+rbx-css automatically escapes special characters in class names to work with Roblox's selector parser. This makes Tailwind-style utility classes work seamlessly:
+
+```css input.css
+/* Tailwind-style classes with special characters */
+.text-\[22px\] {
+  font-size: 22px;
+}
+
+.gap-0\.5 {
+  gap: 0.5rem;
+}
+
+.hover\:bg-red {
+  /* Class name contains colon */
+}
+```
+
+```lua output.luau
+-- Special characters are escaped with backslash
+rule.Selector = ".text-\\[22px\\]"
+rule.Selector = ".gap-0\\.5"
+rule.Selector = ".hover\\:bg-red"
+```
+
+## ID selectors
+
+ID selectors map to Roblox instance name matching:
+
+```css input.css
+#header {
+  height: 64px;
+}
+
+#sidebar {
+  width: 240px;
+}
+```
+
+```lua output.luau
+rule.Selector = "#header"
+rule.Selector = "#sidebar"
+```
+
+## Pseudo-class selectors
+
+CSS pseudo-classes map to Roblox GuiState selectors:
+
+| CSS Pseudo-class | Roblox GuiState | Use Case |
+|------------------|-----------------|----------|
+| `:hover` | `:Hover` | Mouse over element |
+| `:active` | `:Press` | Element being pressed |
+| `:focus` | `:NonDefault` | Element has focus |
+| `:disabled` | `:NonDefault` | Element is disabled |
+
+```css input.css
+.button {
+  background-color: blue;
+}
+
+.button:hover {
+  background-color: lightblue;
+}
+
+.button:active {
+  background-color: darkblue;
+}
+```
+
+```lua output.luau
+rule1.Selector = ".button"
+rule2.Selector = ".button:Hover"
+rule3.Selector = ".button:Press"
+```
+
+<Warning>
+Roblox only supports four GuiStates: `Idle`, `Hover`, `Press`, and `NonDefault`. Other CSS pseudo-classes like `:first-child`, `:nth-child`, `:checked` have no equivalent and are silently ignored.
+</Warning>
+
+## Combinators
+
+rbx-css supports the two combinators available in Roblox:
+
+### Descendant combinator (space)
+
+```css input.css
+.card span {
+  color: gray;
+}
+```
+
+```lua output.luau
+rule.Selector = ".card TextLabel"
+```
+
+### Child combinator (`>`)
+
+```css input.css
+.card > .title {
+  font-weight: bold;
+}
+```
+
+```lua output.luau
+rule.Selector = ".card > .title"
+```
+
+<Warning>
+Adjacent sibling (`+`) and general sibling (`~`) combinators are not supported in Roblox and will emit warnings.
+</Warning>
+
+## Compound selectors
+
+Combine multiple selector types:
+
+```css input.css
+/* Element + class */
+button.primary {
+  background-color: blue;
+}
+
+/* Element + class + pseudo-class */
+button.primary:hover {
+  background-color: lightblue;
+}
+
+/* Parent context + child + pseudo-class */
+.card > button:hover {
+  opacity: 0.8;
+}
+```
+
+```lua output.luau
+rule1.Selector = "TextButton.primary"
+rule2.Selector = "TextButton.primary:Hover"
+rule3.Selector = ".card > TextButton:Hover"
+```
+
+## Unsupported selectors
+
+These selectors have no Roblox equivalent and are silently dropped:
+
+| CSS Selector | Reason |
+|--------------|--------|
+| `*` (universal) | No equivalent in Roblox |
+| `:root` | Handled specially for CSS variables |
+| `::before`, `::after` | No pseudo-element support |
+| `:first-child`, `:last-child`, `:nth-child()` | No structural pseudo-classes |
+| `:not()`, `:is()`, `:where()`, `:has()` | No logical pseudo-classes |
+| `[attribute]` | Attribute selectors (except `[data-theme]` for theming) |
+| `+`, `~` | Sibling combinators |
+
+## Browser reset compatibility
+
+rbx-css automatically ignores common browser reset selectors that have no Roblox equivalent (like `html`, `body`, `head`, `meta`, etc.), allowing you to use frameworks like Tailwind Preflight without warnings.

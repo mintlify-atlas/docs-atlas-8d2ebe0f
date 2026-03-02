@@ -1,0 +1,410 @@
+---
+title: RBXMX model output
+description: Generate RBXMX model files for direct import into Studio or Rojo projects
+---
+
+<Warning>
+RBXMX output is currently **experimental**. StyleRule properties are emitted as XML comments rather than fully encoded RBXMX properties. The [Luau format](/output/luau) is recommended for production use.
+</Warning>
+
+## Overview
+
+The RBXMX output format generates a `.rbxmx` model file containing Roblox `StyleSheet` and `StyleRule` instances. This format can be imported directly into Roblox Studio or synced via Rojo.
+
+## When to use RBXMX output
+
+- **Studio import**: Drag and drop `.rbxmx` files directly into Studio
+- **Rojo projects**: Integrate with Rojo's file system sync
+- **Visual inspection**: View StyleSheet hierarchy in Studio's Explorer
+- **Prototyping**: Quickly test styles without running code
+
+<Warning>
+Because RBXMX property encoding for StyleRule is complex and not fully implemented, properties are stored as XML comments. This means the generated RBXMX files are currently **not functional** and serve primarily as placeholders or documentation.
+</Warning>
+
+## Generated structure
+
+The generated RBXMX file follows Roblox's XML model format:
+
+```xml
+<roblox version="4">
+  <Item class="StyleSheet" referent="RBX0001">
+    <Properties>
+      <string name="Name">StyleSheet</string>
+    </Properties>
+    <!-- Tokens -->
+    <!-- primary: #335fff -->
+    <!-- radius: UDim(0, 8) -->
+    <Item class="StyleRule" referent="RBX0002">
+      <Properties>
+        <string name="Selector">.card</string>
+      </Properties>
+      <!-- Properties:
+        BackgroundColor3 = Color3(51, 95, 255)
+      -->
+    </Item>
+  </Item>
+</roblox>
+```
+
+## XML structure
+
+### Root element
+
+All RBXMX files start with the root `<roblox>` element:
+
+```xml
+<roblox version="4">
+  <!-- StyleSheet items -->
+</roblox>
+```
+
+### StyleSheet instance
+
+The root StyleSheet is created as an `Item` with a unique referent ID:
+
+```xml
+<Item class="StyleSheet" referent="RBX0001">
+  <Properties>
+    <string name="Name">StyleSheet</string>
+  </Properties>
+  <!-- Child StyleRule instances -->
+</Item>
+```
+
+### Design tokens
+
+Tokens from `:root` are listed as XML comments:
+
+```xml
+<!-- Tokens -->
+<!-- primary: #335fff -->
+<!-- radius-md: UDim(0, 8) -->
+<!-- spacing: UDim(0, 16) -->
+```
+
+### StyleRule instances
+
+Each CSS rule becomes a StyleRule instance with its selector:
+
+```xml
+<Item class="StyleRule" referent="RBX0002">
+  <Properties>
+    <string name="Selector">.card</string>
+  </Properties>
+  <!-- Properties:
+    BackgroundColor3 = Color3(51, 95, 255)
+    Size = UDim2(1, 0, 0, 100)
+  -->
+</Item>
+```
+
+### Property comments
+
+Since full RBXMX property encoding is not implemented, properties are listed as comments:
+
+```xml
+<!-- Properties:
+  BackgroundColor3 = Color3(255, 255, 255)
+  TextSize = 16
+  FontFace = GothamSSm
+-->
+```
+
+### XML escaping
+
+Special characters in selectors are properly escaped:
+
+| Character | Escaped |
+|-----------|----------|
+| `<` | `&lt;` |
+| `>` | `&gt;` |
+| `&` | `&amp;` |
+| `"` | `&quot;` |
+
+Example:
+
+```xml
+<string name="Selector">.card &gt; .title</string>
+<!-- .card > .title -->
+```
+
+### Theme StyleSheets
+
+When your CSS includes themes, additional StyleSheet instances are generated:
+
+```xml
+<Item class="StyleSheet" referent="RBX0001">
+  <Properties>
+    <string name="Name">StyleSheet</string>
+  </Properties>
+  <!-- Main rules -->
+</Item>
+
+<Item class="StyleSheet" referent="RBX0002">
+  <Properties>
+    <string name="Name">StyleSheet_dark</string>
+  </Properties>
+  <!-- Theme tokens -->
+</Item>
+```
+
+## Example output
+
+Given this CSS input:
+
+```css
+:root {
+  --primary: #335fff;
+  --radius: 8px;
+}
+
+.card {
+  background-color: var(--primary);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.card > span {
+  color: white;
+  font-size: 18px;
+}
+```
+
+The RBXMX output:
+
+```xml /home/daytona/workspace/source/src/codegen/rbxmx.ts
+<roblox version="4">
+  <Item class="StyleSheet" referent="RBX0001">
+    <Properties>
+      <string name="Name">StyleSheet</string>
+    </Properties>
+    <!-- Tokens -->
+    <!-- primary: #335fff -->
+    <!-- radius: UDim(0, 8) -->
+    <Item class="StyleRule" referent="RBX0002">
+      <Properties>
+        <string name="Selector">.card</string>
+      </Properties>
+      <!-- Properties:
+        BackgroundColor3 = Color3(51, 95, 255)
+      -->
+    </Item>
+    <Item class="StyleRule" referent="RBX0003">
+      <Properties>
+        <string name="Selector">.card::UICorner</string>
+      </Properties>
+      <!-- Properties:
+        CornerRadius = $radius
+      -->
+    </Item>
+    <Item class="StyleRule" referent="RBX0004">
+      <Properties>
+        <string name="Selector">.card::UIPadding</string>
+      </Properties>
+      <!-- Properties:
+        PaddingTop = UDim(0, 16)
+        PaddingBottom = UDim(0, 16)
+        PaddingLeft = UDim(0, 16)
+        PaddingRight = UDim(0, 16)
+      -->
+    </Item>
+    <Item class="StyleRule" referent="RBX0005">
+      <Properties>
+        <string name="Selector">.card &gt; TextLabel</string>
+      </Properties>
+      <!-- Properties:
+        TextColor3 = Color3(255, 255, 255)
+        TextSize = 18
+      -->
+    </Item>
+  </Item>
+</roblox>
+```
+
+## Value serialization
+
+Values in property comments use a readable format:
+
+### Color3
+
+```xml
+<!-- BackgroundColor3 = Color3(255, 0, 153) -->
+```
+
+Token hex colors (in `:root`) are shown as hex:
+
+```xml
+<!-- primary: #335fff -->
+```
+
+### UDim and UDim2
+
+```xml
+<!-- CornerRadius = UDim(0, 8) -->
+<!-- Size = UDim2(1, 0, 0, 100) -->
+```
+
+### Numbers and booleans
+
+```xml
+<!-- TextSize = 16 -->
+<!-- Visible = false -->
+```
+
+### Enums
+
+```xml
+<!-- TextXAlignment = Enum.TextXAlignment.Center -->
+<!-- FillDirection = Enum.FillDirection.Vertical -->
+```
+
+### Fonts
+
+```xml
+<!-- FontFace = GothamSSm -->
+<!-- FontFace = Roboto -->
+```
+
+### Token references
+
+```xml
+<!-- BackgroundColor3 = $primary -->
+<!-- CornerRadius = $radius-md -->
+```
+
+### ColorSequence
+
+```xml
+<!-- Color = ColorSequence(...) -->
+```
+
+## Referent IDs
+
+Each instance receives a unique referent ID for internal Roblox references:
+
+```xml
+<Item class="StyleSheet" referent="RBX0001">
+<Item class="StyleRule" referent="RBX0002">
+<Item class="StyleRule" referent="RBX0003">
+```
+
+Referents are sequential and start from `RBX0001`.
+
+## CLI usage
+
+### Output to file
+
+```bash
+rbx-css compile styles.css -o StyleSheet.rbxmx
+```
+
+### Explicit format flag
+
+```bash
+rbx-css compile styles.css -o output.xml --format rbxmx
+```
+
+### Custom StyleSheet name
+
+```bash
+rbx-css compile styles.css -o StyleSheet.rbxmx --name "AppStyles"
+```
+
+## Programmatic API
+
+```typescript
+import { compile, generateRBXMX } from "rbx-css";
+
+const result = compile(
+  [{ filename: "styles.css", content: cssContent }],
+  { name: "MyStyleSheet", warnLevel: "all", strict: false }
+);
+
+const rbxmx = generateRBXMX(result.ir);
+
+console.log(rbxmx);
+```
+
+## Rojo integration
+
+To use RBXMX files with Rojo, reference them in your `default.project.json`:
+
+```json
+{
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "Styles": {
+        "$path": "out/styles"
+      }
+    }
+  }
+}
+```
+
+Place your generated `.rbxmx` files in the `out/styles` directory:
+
+```
+out/
+  styles/
+    StyleSheet.rbxmx
+    DarkTheme.rbxmx
+```
+
+Rojo will sync these files into ReplicatedStorage.Styles as StyleSheet instances.
+
+## Studio import
+
+To import an RBXMX file into Studio:
+
+1. Right-click in the Explorer window
+2. Select "Insert from File..."
+3. Choose your `.rbxmx` file
+4. The StyleSheet will appear in the selected location
+
+<Warning>
+Because properties are stored as comments, the imported StyleSheet will have empty rules. This format is currently only useful for inspecting the rule structure.
+</Warning>
+
+## Limitations
+
+### Property encoding not implemented
+
+The main limitation is that StyleRule properties are not fully encoded in RBXMX format. They appear only as comments:
+
+```xml
+<!-- Properties:
+  BackgroundColor3 = Color3(255, 255, 255)
+-->
+```
+
+This means:
+
+- **Not functional**: Rules won't have any properties when imported
+- **Documentation only**: Useful for viewing structure but not for production
+- **Manual editing required**: You'd need to manually add properties in Studio
+
+### Future improvements
+
+Full RBXMX property encoding would require:
+
+1. Proper XML attribute serialization for each Roblox data type
+2. Binary data encoding for complex types
+3. Attribute dictionary encoding for token references
+
+## When to use Luau instead
+
+For production use cases, the [Luau format](/output/luau) is recommended because:
+
+- **Fully functional**: All properties are properly set
+- **Type safe**: Luau's type system catches errors
+- **Minification**: Supports minified output
+- **Flexible**: Can be required and called at runtime
+- **Debuggable**: Easier to inspect and modify
+
+Use RBXMX only when:
+
+- You need to inspect StyleSheet structure visually
+- You're prototyping and don't need working properties
+- You want to manually complete the StyleSheet in Studio
